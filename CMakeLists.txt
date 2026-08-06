@@ -7,12 +7,19 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
-# Create your game executable target as usual
-add_executable(gbweb EXCLUDE_FROM_ALL src/gbweb.c)
+add_subdirectory(vendored/SDL EXCLUDE_FROM_ALL)
+
+set(SOURCE_FILES
+  src/main.c
+  src/input.c
+)
+
+include_directories(src)
+# Create executable target as usual
+add_executable(gbweb ${SOURCE_FILES})
+target_link_libraries(gbweb PRIVATE SDL3::SDL3)
 
 # on Web targets, we need CMake to generate a HTML webpage.
 if(EMSCRIPTEN)
   set(CMAKE_EXECUTABLE_SUFFIX ".html" CACHE INTERNAL "")
-  target_compile_options(gbweb PRIVATE -sUSE_SDL=2)
-  target_link_options(gbweb PRIVATE -sUSE_SDL=2)
 endif()
