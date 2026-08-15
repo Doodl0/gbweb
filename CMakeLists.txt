@@ -12,6 +12,7 @@ add_subdirectory(vendored/SDL EXCLUDE_FROM_ALL)
 set(SOURCE_FILES
   src/main.c
   src/input.c
+  src/file.c
 )
 
 include_directories(src)
@@ -21,5 +22,7 @@ target_link_libraries(gbweb PRIVATE SDL3::SDL3)
 
 # on Web targets, we need CMake to generate a HTML webpage.
 if(EMSCRIPTEN)
-  set(CMAKE_EXECUTABLE_SUFFIX ".html" CACHE INTERNAL "")
+  #set(CMAKE_EXECUTABLE_SUFFIX ".html" CACHE INTERNAL "")
+  target_link_options(gbweb PRIVATE -sEXPORTED_RUNTIME_METHODS=[ccall,HEAPU8])
+  target_link_options(gbweb PRIVATE -sEXPORTED_FUNCTIONS=[_main,_malloc,_free])
 endif()

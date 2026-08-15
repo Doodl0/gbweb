@@ -3,6 +3,7 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_log.h>
 #include <input.h>
+#include <file.h>
 #include <stdio.h>
 
 #ifdef __EMSCRIPTEN__
@@ -10,13 +11,14 @@
 #endif
 
 // Emulator Settings
-#define RESOLUTION_SCALE 1
+#define RESOLUTION_SCALE 4
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
+
     // Create window and renderer
     if (!SDL_CreateWindowAndRenderer("GBWeb", 160 * RESOLUTION_SCALE, 144 * RESOLUTION_SCALE, 0, &window, &renderer)) {
         SDL_Log("Couldn't create window and renderer: %s", SDL_GetError());
@@ -39,7 +41,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 // Per frame iteration
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
-    const char *message = "Hello World!";
+    char* message = "Hello World";
     int w = 0, h = 0;
     float x, y;
     const float scale = 4.0f;
