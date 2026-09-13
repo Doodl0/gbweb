@@ -8,7 +8,7 @@
 // Based on stackoverflow.com/questions/69935188/open-a-file-in-emscripten-using-browser-file-selector-dialogue
 // and github.com/Armchair-Software/emscripten-browser-file
 
-void open_file_dialog() {
+void OpenFileDialog() {
     #ifdef __EMSCRIPTEN__
     EM_ASM(
       var file_selector = document.createElement('input');
@@ -22,7 +22,7 @@ void open_file_dialog() {
 
 #ifdef __EMSCRIPTEN__
 
-EMSCRIPTEN_KEEPALIVE int load_file(uint8_t *buffer, size_t size) {
+EMSCRIPTEN_KEEPALIVE int LoadFile(uint8_t *buffer, size_t size) {
   /// Load a file - this function is called from javascript when the file upload is activated
   SDL_Log("load_file triggered, buffer %p size %d", &buffer, size);
 

@@ -12,7 +12,7 @@
 #define SELECT SDL_SCANCODE_BACKSPACE
 #define OPEN_ROM SDL_SCANCODE_TAB
 
-void input(SDL_Event *event) {
+void Input(SDL_Event *event) {
     if (event->key.down) {
         if (event->key.scancode == UP) {
             SDL_Log("Up");
@@ -27,7 +27,7 @@ void input(SDL_Event *event) {
             SDL_Log("Right");
         }
         else if (event->key.scancode == OPEN_ROM) {
-            open_file_dialog();
+            OpenFileDialog();
         }
     }
 }

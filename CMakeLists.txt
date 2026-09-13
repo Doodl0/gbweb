@@ -13,12 +13,15 @@ set(SOURCE_FILES
   src/main.c
   src/input.c
   src/file.c
+  src/registers.c
+  src/cpu.c
 )
 
 include_directories(src)
 # Create executable target as usual
 add_executable(gbweb ${SOURCE_FILES})
 target_link_libraries(gbweb PRIVATE SDL3::SDL3)
+set_property(TARGET gbweb PROPERTY C_STANDARD 11)
 
 # on Web targets, we need CMake to generate a HTML webpage.
 if(EMSCRIPTEN)

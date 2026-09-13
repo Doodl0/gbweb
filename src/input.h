@@ -1,3 +1,3 @@
 #include <SDL3/SDL.h>
 
-void input(SDL_Event *event);
+void Input(SDL_Event *event);
