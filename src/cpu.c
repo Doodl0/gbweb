@@ -1,18 +1,223 @@
+#include "SDL3/SDL_video.h"
+#include <registers.h>
+
 struct Instruction {
     char* dissassembly;
     unsigned char operandLength;
     void* execute;
 } typedef instruction;
 
-enum ArithmeticTarget {
-    A, B, C, D, E, H, L
-} typedef arithmetic_target;
 
 /*
 const struct instruction instructions[256] {
 
 }
 */
+
+struct registers registers;
+struct flagsRegister flagsRegister;
+
+void WriteToRegister(enum registerEnum target, unsigned char value) {
+    switch (target) {
+        case A:
+            registers.a = value;
+            break;
+        case B:
+            registers.b = value;
+            break;
+        case C:
+            registers.c = value;
+            break;
+        case D:
+            registers.d = value;
+            break;
+        case E:
+            registers.e = value;
+            break;
+        case H:
+            registers.h = value;
+            break;
+        case L:
+            registers.l = value;
+            break;
+    }
+}
+
+void ADC_A(unsigned char value) {
+    // Add carry flag, register A and the input value
+    int result = registers.a + (value + (int)flagsRegister.carry);
+
+    // Make sure the value is shortened to 8 bits
+    registers.a = (unsigned char)(result & 0xff);
+
+    // Check if overflown from bit 7
+    if (result & 0xFF00) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) flagsRegister.half_carry = true;
+    // Check if 0
+    if (result == 0) flagsRegister.zero = true;
+    // Not a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+void ADD_A(unsigned char value) {
+    // Add register A and the input value
+    int result = registers.a + value;
+
+    // Make sure the value is shortened to 8 bits
+    registers.a = (unsigned char)(result & 0xff);
+
+    // Check if overflown from bit 7
+    if (result & 0xFF00) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) flagsRegister.half_carry = true;
+    // Check if 0
+    if (result == 0) flagsRegister.zero = true;
+    // Not a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+void SUB(unsigned char value) {
+    registers.a = registers.a - value;
+
+    // Check if overflown from bit 7
+    if (value  > registers.a) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    // Check if 0
+    if (registers.a  == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = true;
+}
+
+void SBC_A(unsigned char value) {
+    // Subtract carry flag and the input value from register A
+    registers.a = registers.a - value - (unsigned char)flagsRegister.carry;
+
+    // Check if overflown from bit 7
+    if (value.a > registers.a) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = true;
+}
+
+void AND(unsigned char value) {
+    // Bitwise AND of A and value
+    registers.a = registers.a & value;
+
+    // Check if overflown from bit 7
+    flagsRegister.carry = false;
+    // Check if overflown from bit 3
+    flagsRegister.half_carry = true;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+void XOR(unsigned char value) {
+    // Bitwise XOR of A and value
+    registers.a = registers.a ^ value;
+
+    // Check if overflown from bit 7
+    flagsRegister.carry = false;
+    // Check if overflown from bit 3
+    flagsRegister.half_carry = false;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+void OR(unsigned char value) {
+    // Bitwise XOR of A and value
+    registers.a = registers.a | value;
+
+    // Check if overflown from bit 7
+    flagsRegister.carry = false;
+    // Check if overflown from bit 3
+    flagsRegister.half_carry = false;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+void CP(unsigned char value) {
+    // Compare and set flags
+
+    // Check if overflown from bit 7
+    if (value  > registers.a) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    // Check if 0
+    if (registers.a  == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = true;
+}
+
+enum registerEnum Table_r(int index) {
+    enum registerEnum target = A;
+    switch (index) {
+        case 0:
+            target = B;
+            break;
+        case 1:
+            target = C;
+            break;
+        case 2:
+            target = D;
+            break;
+        case 3:
+            target = E;
+            break;
+        case 4:
+            target = H;
+            break;
+        case 5:
+            target = L;
+            break;
+        case 6:
+            target = HL;
+            break;
+        case 7:
+            target = A;
+            break;
+    }
+    return target;
+}
+
+void Table_alu(int index, unsigned char value) {
+    switch (index) {
+        case 0:
+            ADD_A(value);
+            break;
+        case 1:
+            ADC_A(value);
+            break;
+        case 2:
+            SUB(value);
+            break;
+        case 3:
+            SBC_A(value);
+            break;
+        case 4:
+            AND(value);
+            break;
+        case 5:
+            XOR(value);
+            break;
+        case 6:
+            OR(value);
+            break;
+        case 7:
+            CP(value);
+            break;
+    }
+}
 
 // Make sure all instructions are converted to a full 4 bytes first
 void CPU_ExecuteInstruction(char instruction[4]) {
