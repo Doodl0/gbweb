@@ -1,19 +1,6 @@
 #include "SDL3/SDL_video.h"
 #include <registers.h>
 
-struct Instruction {
-    char* dissassembly;
-    unsigned char operandLength;
-    void* execute;
-} typedef instruction;
-
-
-/*
-const struct instruction instructions[256] {
-
-}
-*/
-
 struct registers registers;
 struct flagsRegister flagsRegister;
 
@@ -41,122 +28,6 @@ void WriteToRegister(enum registerEnum target, unsigned char value) {
             registers.l = value;
             break;
     }
-}
-
-void ADC_A(unsigned char value) {
-    // Add carry flag, register A and the input value
-    int result = registers.a + (value + (int)flagsRegister.carry);
-
-    // Make sure the value is shortened to 8 bits
-    registers.a = (unsigned char)(result & 0xff);
-
-    // Check if overflown from bit 7
-    if (result & 0xFF00) flagsRegister.carry = true;
-    // Check if overflown from bit 3
-    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) flagsRegister.half_carry = true;
-    // Check if 0
-    if (result == 0) flagsRegister.zero = true;
-    // Not a subtract to set to false
-    flagsRegister.subtract = false;
-}
-
-void ADD_A(unsigned char value) {
-    // Add register A and the input value
-    int result = registers.a + value;
-
-    // Make sure the value is shortened to 8 bits
-    registers.a = (unsigned char)(result & 0xff);
-
-    // Check if overflown from bit 7
-    if (result & 0xFF00) flagsRegister.carry = true;
-    // Check if overflown from bit 3
-    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) flagsRegister.half_carry = true;
-    // Check if 0
-    if (result == 0) flagsRegister.zero = true;
-    // Not a subtract to set to false
-    flagsRegister.subtract = false;
-}
-
-void SUB(unsigned char value) {
-    registers.a = registers.a - value;
-
-    // Check if overflown from bit 7
-    if (value  > registers.a) flagsRegister.carry = true;
-    // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
-    // Check if 0
-    if (registers.a  == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = true;
-}
-
-void SBC_A(unsigned char value) {
-    // Subtract carry flag and the input value from register A
-    registers.a = registers.a - value - (unsigned char)flagsRegister.carry;
-
-    // Check if overflown from bit 7
-    if (value.a > registers.a) flagsRegister.carry = true;
-    // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
-    // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = true;
-}
-
-void AND(unsigned char value) {
-    // Bitwise AND of A and value
-    registers.a = registers.a & value;
-
-    // Check if overflown from bit 7
-    flagsRegister.carry = false;
-    // Check if overflown from bit 3
-    flagsRegister.half_carry = true;
-    // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = false;
-}
-
-void XOR(unsigned char value) {
-    // Bitwise XOR of A and value
-    registers.a = registers.a ^ value;
-
-    // Check if overflown from bit 7
-    flagsRegister.carry = false;
-    // Check if overflown from bit 3
-    flagsRegister.half_carry = false;
-    // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = false;
-}
-
-void OR(unsigned char value) {
-    // Bitwise XOR of A and value
-    registers.a = registers.a | value;
-
-    // Check if overflown from bit 7
-    flagsRegister.carry = false;
-    // Check if overflown from bit 3
-    flagsRegister.half_carry = false;
-    // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = false;
-}
-
-void CP(unsigned char value) {
-    // Compare and set flags
-
-    // Check if overflown from bit 7
-    if (value  > registers.a) flagsRegister.carry = true;
-    // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
-    // Check if 0
-    if (registers.a  == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = true;
 }
 
 enum registerEnum Table_r(int index) {
@@ -188,6 +59,122 @@ enum registerEnum Table_r(int index) {
             break;
     }
     return target;
+}
+
+static void ADC_A(unsigned char value) {
+    // Add carry flag, register A and the input value
+    int result = registers.a + (value + (int)flagsRegister.carry);
+
+    // Make sure the value is shortened to 8 bits
+    registers.a = (unsigned char)(result & 0xff);
+
+    // Check if overflown from bit 7
+    if (result & 0xFF00) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) flagsRegister.half_carry = true;
+    // Check if 0
+    if (result == 0) flagsRegister.zero = true;
+    // Not a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+static void ADD_A(unsigned char value) {
+    // Add register A and the input value
+    int result = registers.a + value;
+
+    // Make sure the value is shortened to 8 bits
+    registers.a = (unsigned char)(result & 0xff);
+
+    // Check if overflown from bit 7
+    if (result & 0xFF00) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) flagsRegister.half_carry = true;
+    // Check if 0
+    if (result == 0) flagsRegister.zero = true;
+    // Not a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+static void SUB(unsigned char value) {
+    registers.a = registers.a - value;
+
+    // Check if overflown from bit 7
+    if (value  > registers.a) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    // Check if 0
+    if (registers.a  == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = true;
+}
+
+static void SBC_A(unsigned char value) {
+    // Subtract carry flag and the input value from register A
+    registers.a = registers.a - value - (unsigned char)flagsRegister.carry;
+
+    // Check if overflown from bit 7
+    if (value.a > registers.a) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = true;
+}
+
+static void AND(unsigned char value) {
+    // Bitwise AND of A and value
+    registers.a = registers.a & value;
+
+    // Check if overflown from bit 7
+    flagsRegister.carry = false;
+    // Check if overflown from bit 3
+    flagsRegister.half_carry = true;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+static void XOR(unsigned char value) {
+    // Bitwise XOR of A and value
+    registers.a = registers.a ^ value;
+
+    // Check if overflown from bit 7
+    flagsRegister.carry = false;
+    // Check if overflown from bit 3
+    flagsRegister.half_carry = false;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+static void OR(unsigned char value) {
+    // Bitwise XOR of A and value
+    registers.a = registers.a | value;
+
+    // Check if overflown from bit 7
+    flagsRegister.carry = false;
+    // Check if overflown from bit 3
+    flagsRegister.half_carry = false;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = false;
+}
+
+static void CP(unsigned char value) {
+    // Compare and set flags
+
+    // Check if overflown from bit 7
+    if (value  > registers.a) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    // Check if 0
+    if (registers.a  == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = true;
 }
 
 void Table_alu(int index, unsigned char value) {
