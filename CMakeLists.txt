@@ -17,7 +17,7 @@ set(SOURCE_FILES
   src/cpu.c
 )
 
-include_directories(src)
+include_directories(include)
 # Create executable target as usual
 add_executable(gbweb ${SOURCE_FILES})
 target_link_libraries(gbweb PRIVATE SDL3::SDL3)

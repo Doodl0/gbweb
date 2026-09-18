@@ -51,8 +51,17 @@ struct flagsRegister {
     bool carry;
 };
 
-enum registerEnum {
-    A, B, C, D, E, H, L, HL
+// 8-bit registers
+enum r8Enum {
+    A, B, C, D, E, H, L, HL8
+};
+// Register pairs
+enum r16Enum {
+    BC, DE, HL, SP, AF
+};
+// Conditions
+enum ccEnum {
+    NZ, Z, NC, CA
 };
 
 unsigned char ConvertFlagsRegisterToChar(struct flagsRegister flagsRegister);

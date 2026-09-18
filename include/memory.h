@@ -1,3 +1,5 @@
 struct memoryBus {
-    char memory[0xFFFF];
-}
+    unsigned char memory[0xFFFF];
+};
+
+char Memory_ReadByte(struct memoryBus memory, unsigned short address);

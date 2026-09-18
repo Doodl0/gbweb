@@ -1,10 +1,21 @@
-#include "SDL3/SDL_video.h"
 #include <registers.h>
+#include <memory.h>
+#include <SDL3/SDL.h>
 
+// Function for missing instruction
+static void MissingInstruction(char *instruction) {
+    SDL_Log("Missing function %s", instruction);
+    SDL_Quit();
+}
+
+// Memory and registers
 struct registers registers;
 struct flagsRegister flagsRegister;
+unsigned short pc;
+struct memoryBus memoryBus;
 
-void WriteToRegister(enum registerEnum target, unsigned char value) {
+// Modifiying registers based on enums
+void WriteToR8(enum r8Enum target, unsigned char value) {
     switch (target) {
         case A:
             registers.a = value;
@@ -30,8 +41,39 @@ void WriteToRegister(enum registerEnum target, unsigned char value) {
     }
 }
 
-enum registerEnum Table_r(int index) {
-    enum registerEnum target = A;
+unsigned char ReadFromR8(enum r8Enum r) {
+    unsigned char value;
+    switch (r) {
+        case A:
+            value = registers.a;
+            break;
+        case B:
+            value = registers.b;
+            break;
+        case C:
+            value = registers.c;
+            break;
+        case D:
+            value = registers.d;
+            break;
+        case E:
+            value = registers.e;
+            break;
+        case H:
+            value = registers.h;
+            break;
+        case L:
+            value = registers.l;
+            break;
+    }
+    return value;
+}
+
+// Value tables
+
+// 8-bit registers
+static enum r8Enum Table_r(unsigned int index) {
+    enum r8Enum target = A;
     switch (index) {
         case 0:
             target = B;
@@ -52,7 +94,7 @@ enum registerEnum Table_r(int index) {
             target = L;
             break;
         case 6:
-            target = HL;
+            target = HL8;
             break;
         case 7:
             target = A;
@@ -60,7 +102,65 @@ enum registerEnum Table_r(int index) {
     }
     return target;
 }
+// Register pairs featuring SP
+static enum r16Enum Table_rp(unsigned int index) {
+    enum r16Enum target = BC;
+    switch (index) {
+        case 0:
+            target = BC;
+            break;
+        case 1:
+            target = DE;
+            break;
+        case 2:
+            target = HL;
+            break;
+        case 3:
+            target = SP;
+            break;
+        }
+        return target;
+}
+// Register pairs featuring AF
+static enum r16Enum Table_rp2(unsigned int index) {
+    enum r16Enum target = BC;
+    switch (index) {
+        case 0:
+            target = BC;
+            break;
+        case 1:
+            target = DE;
+            break;
+        case 2:
+            target = HL;
+            break;
+        case 3:
+            target = AF;
+            break;
+        }
+        return target;
+}
+//
+static enum ccEnum Table_cc(unsigned int index) {
+    enum ccEnum target = NZ;
+    switch (index) {
+        case 0:
+            target = NZ;
+            break;
+        case 1:
+            target = Z;
+            break;
+        case 2:
+            target = NC;
+            break;
+        case 3:
+            target = CA;
+            break;
+        }
+        return target;
+}
 
+// Instructions
 static void ADC_A(unsigned char value) {
     // Add carry flag, register A and the input value
     int result = registers.a + (value + (int)flagsRegister.carry);
@@ -113,7 +213,7 @@ static void SBC_A(unsigned char value) {
     registers.a = registers.a - value - (unsigned char)flagsRegister.carry;
 
     // Check if overflown from bit 7
-    if (value.a > registers.a) flagsRegister.carry = true;
+    if (value > registers.a) flagsRegister.carry = true;
     // Check if overflown from bit 3
     if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
     // Check if 0
@@ -177,7 +277,10 @@ static void CP(unsigned char value) {
     flagsRegister.subtract = true;
 }
 
-void Table_alu(int index, unsigned char value) {
+// Instruction tables
+
+// Arithmetic/logic operations
+static void Table_alu(unsigned int index, unsigned char value) {
     switch (index) {
         case 0:
             ADD_A(value);
@@ -205,43 +308,96 @@ void Table_alu(int index, unsigned char value) {
             break;
     }
 }
+// alu table but accepts a register input, then passes value to main alu function
+static void Table_alu_register(unsigned int index, enum r8Enum r) {
+        if (r == HL8) {
+            Table_alu(index, memoryBus.memory[registers.hl]);
+        }
+        else {
+            Table_alu(index, ReadFromR8(r));
+        }
+}
+// Rotation/shift operations
+static void Table_rot(unsigned int index, enum r8Enum r) {
+    unsigned char value = 0;
+    if (r == HL8) {
+        value = memoryBus.memory[registers.hl];
+    }
+    else {
+        value = ReadFromR8(r);
+    }
+
+    switch (index) {
+        case 0:
+            MissingInstruction("RLC(value)");
+            break;
+        case 1:
+            MissingInstruction("RRC(value)");
+            break;
+        case 2:
+            MissingInstruction("RL(value)");
+            break;
+        case 3:
+            MissingInstruction("RR(value)");
+            break;
+        case 4:
+            MissingInstruction("SLA(value)");
+            break;
+        case 5:
+            MissingInstruction("SRA(value)");
+            break;
+        case 6:
+            MissingInstruction("SWAP(value)");
+            break;
+        case 7:
+            MissingInstruction("SRL(value)");
+            break;
+    }
+}
 
 // Make sure all instructions are converted to a full 4 bytes first
-void CPU_ExecuteInstruction(char instruction[4]) {
-
-    // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
-    char x = instruction[1] >> 6;
-    char y = (instruction[1] >> 3) & 0x07;
-    char z = instruction[1] & 0x07;
-    char p = y >> 1;
-    char q = y % 2;
-
+void CPU_ExecuteInstruction(unsigned short address) {
     // Prefix CB
-    if (instruction[0] == (char)0xCB) {
+    if (memoryBus.memory[address] == (unsigned char)0xCB) {
+
+        // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
+        // Uses next byte as first byte is prefix
+        unsigned char x = memoryBus.memory[address + 1] >> 6;
+        unsigned char y = (memoryBus.memory[address + 1] >> 3) & 0x07;
+        unsigned char z = memoryBus.memory[address + 1] & 0x07;
+
         switch (x) {
             // Roll/shift register or memory location
             case 0:
-                // rot[y] r[z]
+                Table_rot(y, Table_r(z));
                 break;
 
             // Test bit
             case 1:
-                // BIT y, r[z]
+                MissingInstruction("BIT y, r[z]");
                 break;
 
             // Reset bit
             case 2:
-                // RES y, r[z]
+                MissingInstruction("RES y, r[z]");
                 break;
 
             // Set bit
             case 3:
-                // SET y, r[z]
+                MissingInstruction("SET y, r[z]");
                 break;
         }
     }
     // No prefix
     else {
+
+        // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
+        unsigned char x = memoryBus.memory[address] >> 6;
+        unsigned char y = (memoryBus.memory[address] >> 3) & 0x07;
+        unsigned char z = memoryBus.memory[address] & 0x07;
+        unsigned char p = y >> 1;
+        unsigned char q = y % 2;
+
         switch (x) {
             case 0:
                 switch (z) {
@@ -249,19 +405,19 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                     case 0:
                         switch (y) {
                             case 0:
-                                // NOP
+                                MissingInstruction("NOP");
                                 break;
                             case 1:
-                                // LD (nn), SP
+                                MissingInstruction("LD (nn), SP");
                                 break;
                             case 2:
-                                // STOP
+                                MissingInstruction("STOP");
                                 break;
                             case 3:
-                                // JR d
+                                MissingInstruction("JR d");
                                 break;
                             case 4 ... 7:
-                                // JR cc[y-4], d
+                                MissingInstruction("JR cc[y-4], d");
                                 break;
                         }
                     break;
@@ -270,10 +426,10 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                     case 1:
                         switch (q) {
                             case 0:
-                                // LD rp[p], nn
+                                MissingInstruction("LD rp[p], nn");
                                 break;
                             case 1:
-                                // ADD HL, rp[p]
+                                MissingInstruction("ADD HL, rp[p]");
                                 break;
                         }
                     break;
@@ -284,31 +440,31 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                             case 0:
                                 switch (p) {
                                     case 0:
-                                        // LD (BC), A
+                                        MissingInstruction("LD (BC), A");
                                         break;
                                     case 1:
-                                        // LD (DE), A
+                                        MissingInstruction("LD (DE), A");
                                         break;
                                     case 2:
-                                        // LD (HL+), A
+                                        MissingInstruction("LD (HL+), A");
                                         break;
                                     case 3:
-                                        // LD (HL-), A
+                                        MissingInstruction("LD (HL-), A");
                                         break;
                                 }
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        // LD A, (BC)
+                                        MissingInstruction("LD A, (BC)");
                                         break;
                                     case 1:
-                                        // LD A, (DE)
+                                        MissingInstruction("LD A, (DE)");
                                         break;
                                     case 2:
-                                        // LD A, (HL+)
+                                        MissingInstruction("LD A, (HL+)");
                                         break;
                                     case 3:
-                                        // LD A, (HL-)
+                                        MissingInstruction("LD A, (HL-)");
                                         break;
                                 }
                                 break;
@@ -319,55 +475,55 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                     case 3:
                         switch (q) {
                             case 0:
-                                // INC rp[p]
+                                MissingInstruction("INC rp[p]");
                                 break;
                             case 1:
-                                // DEC rp[p]
+                                MissingInstruction("DEC rp[p]");
                                 break;
                         }
                     break;
 
                     // 8-bit INC
                     case 4:
-                       // INC r[y]
+                       MissingInstruction("INC r[y]");
                     break;
 
                     // 8-bit DEC
                     case 5:
-                       // DEC r[y]
+                       MissingInstruction("DEC r[y]");
                     break;
 
                     // 8-bit load immediate
                     case 6:
-                       // LD r[y], n
+                       MissingInstruction("LD r[y], n");
                     break;
 
                     // Assorted operations on accumulator/flags
                     case 7:
                         switch (y) {
                             case 0:
-                                // RLCA
+                                MissingInstruction("RLCA");
                                 break;
                             case 1:
-                                // RRCA
+                                MissingInstruction("RRCA");
                                 break;
                             case 2:
-                                // RLA
+                                MissingInstruction("RLA");
                                 break;
                             case 3:
-                                // RRA
+                                MissingInstruction("RRA");
                                 break;
                             case 4:
-                                // DAA
+                                MissingInstruction("DAA");
                                 break;
                             case 5:
-                                // CPL
+                                MissingInstruction("CPL");
                                 break;
                             case 6:
-                                // SCF
+                                MissingInstruction("SCF");
                                 break;
                             case 7:
-                                // CCF
+                                MissingInstruction("CCF");
                                 break;
                         }
                     break;
@@ -377,17 +533,17 @@ void CPU_ExecuteInstruction(char instruction[4]) {
             case 1:
                 // Exception (replaces LD (HL), (HL))
                 if (z == 6) {
-                    // HALT
+                    MissingInstruction("HALT");
                 }
                 // 8-bit loading
                 else {
-                    // LD r[y], r[z]
+                    MissingInstruction("LD r[y], r[z]");
                 }
             break;
 
             case 2:
                 // Operate on accumulator and register/memory location
-                // alu[y] r[z]
+                Table_alu_register(y, Table_r(z));
             break;
 
             case 3:
@@ -396,23 +552,23 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                     case 0:
                         switch (y) {
                             case 0 ... 3:
-                                // RET cc[y]
+                                MissingInstruction("RET cc[y]");
                                 break;
 
                             case 4:
-                                // LD (0xFF00 + n), A
+                                MissingInstruction("LD (0xFF00 + n), A");
                                 break;
 
                             case 5:
-                                // ADD SP, d
+                                MissingInstruction("ADD SP, d");
                                 break;
 
                             case 6:
-                                // LD A, (0xFF00 + n)
+                                MissingInstruction("LD A, (0xFF00 + n)");
                                 break;
 
                             case 7:
-                                // LD HL, SP+ d
+                                MissingInstruction("LD HL, SP+ d");
                                 break;
                         }
                         break;
@@ -421,25 +577,25 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                     case 1:
                         switch (q) {
                             case 0:
-                                // POP rp2[p]
+                                MissingInstruction("POP rp2[p]");
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        // RET
+                                        MissingInstruction("RET");
                                         break;
 
                                     case 1:
-                                        // RETI
+                                        MissingInstruction("RETI");
                                         break;
 
                                     case 2:
-                                        // JP HL
+                                        MissingInstruction("JP HL");
                                         break;
 
                                     case 3:
-                                        // LD SP, HL
+                                        MissingInstruction("LD SP, HL");
                                         break;
                                 }
                                 break;
@@ -450,23 +606,23 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                     case 2:
                         switch (y) {
                             case 0 ... 3:
-                                // JP cc[y], nn
+                                MissingInstruction("JP cc[y], nn");
                                 break;
 
                             case 4:
-                                // LD (0xFF00+C), A
+                                MissingInstruction("LD (0xFF00+C), A");
                                 break;
 
                             case 5:
-                                // LD (nn), A
+                                MissingInstruction("LD (nn), A");
                                 break;
 
                             case 6:
-                                // LD A, (0xFF00+C)
+                                MissingInstruction("LD A, (0xFF00+C)");
                                 break;
 
                             case 7:
-                                // LD A, (nn)
+                                MissingInstruction("LD A, (nn)");
                                 break;
                         }
                     break;
@@ -475,15 +631,15 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                     case 3:
                         switch (y) {
                             case 0:
-                                // JP nn
+                                MissingInstruction("JP nn");
                                 break;
 
                             case 6:
-                                // DI
+                                MissingInstruction("DI");
                                 break;
 
                             case 7:
-                                // EI
+                                MissingInstruction("EI");
                                 break;
                         }
                     break;
@@ -492,7 +648,7 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                     case 4:
                         switch (y) {
                             case 0 ... 3:
-                                // CALL cc[y], nn
+                                MissingInstruction("CALL cc[y], nn");
                                 break;
                         }
                     break;
@@ -501,13 +657,13 @@ void CPU_ExecuteInstruction(char instruction[4]) {
                     case 5:
                         switch (q) {
                             case 0:
-                                // PUSH rp2[p]
+                                MissingInstruction("PUSH rp2[p]");
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        // CALL nn
+                                        MissingInstruction("CALL nn");
                                         break;
                                 }
                                 break;
@@ -516,15 +672,21 @@ void CPU_ExecuteInstruction(char instruction[4]) {
 
                     // Operate on accumulator and immediate operand
                     case 6:
-                        // alu[y] n
+                        Table_alu(y, memoryBus.memory[address + 1]);
                     break;
 
                     // Restart
                     case 7:
-                        // RST y*8
+                        MissingInstruction("RST y*8");
                     break;
                 }
             break;
         }
     }
+}
+
+void CPU_Step() {
+    unsigned char instructionByte = Memory_ReadByte(memoryBus, pc);
+
+    CPU_ExecuteInstruction(pc);
 }
