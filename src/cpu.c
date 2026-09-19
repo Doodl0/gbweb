@@ -1,6 +1,7 @@
 #include <registers.h>
 #include <memory.h>
 #include <SDL3/SDL.h>
+#include <stdbool.h>
 
 // Function for missing instruction
 static void MissingInstruction(char *instruction) {
@@ -67,6 +68,25 @@ unsigned char ReadFromR8(enum r8Enum r) {
             break;
     }
     return value;
+}
+
+// Flag checks
+bool ConditionCodeCheck(enum ccEnum cc) {
+    switch(cc) {
+        case Z:
+            if (flagsRegister.zero) return true;
+            break;
+        case NZ:
+            if (!flagsRegister.zero) return true;
+            break;
+        case CA:
+            if (flagsRegister.carry) return true;
+            break;
+        case NC:
+            if (!flagsRegister.carry) return true;
+            break;
+    }
+    return false;
 }
 
 // Value tables
@@ -355,8 +375,8 @@ static void Table_rot(unsigned int index, enum r8Enum r) {
     }
 }
 
-// Make sure all instructions are converted to a full 4 bytes first
-void CPU_ExecuteInstruction(unsigned short address) {
+// Executes an instruction and returns new pc address
+unsigned short CPU_ExecuteInstruction(unsigned short address) {
     // Prefix CB
     if (memoryBus.memory[address] == (unsigned char)0xCB) {
 
@@ -387,6 +407,7 @@ void CPU_ExecuteInstruction(unsigned short address) {
                 MissingInstruction("SET y, r[z]");
                 break;
         }
+        return (address + 2);
     }
     // No prefix
     else {
@@ -406,18 +427,23 @@ void CPU_ExecuteInstruction(unsigned short address) {
                         switch (y) {
                             case 0:
                                 MissingInstruction("NOP");
+                                return (address + 1);
                                 break;
                             case 1:
                                 MissingInstruction("LD (nn), SP");
+                                return (address + 3);
                                 break;
                             case 2:
                                 MissingInstruction("STOP");
+                                return (address + 1);
                                 break;
                             case 3:
                                 MissingInstruction("JR d");
+                                return (address + 2);
                                 break;
                             case 4 ... 7:
                                 MissingInstruction("JR cc[y-4], d");
+                                return (address + 2);
                                 break;
                         }
                     break;
@@ -427,9 +453,11 @@ void CPU_ExecuteInstruction(unsigned short address) {
                         switch (q) {
                             case 0:
                                 MissingInstruction("LD rp[p], nn");
+                                return (address + 3);
                                 break;
                             case 1:
                                 MissingInstruction("ADD HL, rp[p]");
+                                return (address + 1);
                                 break;
                         }
                     break;
@@ -441,30 +469,38 @@ void CPU_ExecuteInstruction(unsigned short address) {
                                 switch (p) {
                                     case 0:
                                         MissingInstruction("LD (BC), A");
+                                        return (address + 1);
                                         break;
                                     case 1:
                                         MissingInstruction("LD (DE), A");
+                                        return (address + 1);
                                         break;
                                     case 2:
                                         MissingInstruction("LD (HL+), A");
+                                        return (address + 1);
                                         break;
                                     case 3:
                                         MissingInstruction("LD (HL-), A");
+                                        return (address + 1);
                                         break;
                                 }
                             case 1:
                                 switch (p) {
                                     case 0:
                                         MissingInstruction("LD A, (BC)");
+                                        return (address + 1);
                                         break;
                                     case 1:
                                         MissingInstruction("LD A, (DE)");
+                                        return (address + 1);
                                         break;
                                     case 2:
                                         MissingInstruction("LD A, (HL+)");
+                                        return (address + 1);
                                         break;
                                     case 3:
                                         MissingInstruction("LD A, (HL-)");
+                                        return (address + 1);
                                         break;
                                 }
                                 break;
@@ -476,9 +512,11 @@ void CPU_ExecuteInstruction(unsigned short address) {
                         switch (q) {
                             case 0:
                                 MissingInstruction("INC rp[p]");
+                                return (address + 1);
                                 break;
                             case 1:
                                 MissingInstruction("DEC rp[p]");
+                                return (address + 1);
                                 break;
                         }
                     break;
@@ -486,16 +524,19 @@ void CPU_ExecuteInstruction(unsigned short address) {
                     // 8-bit INC
                     case 4:
                        MissingInstruction("INC r[y]");
+                       return (address + 1);
                     break;
 
                     // 8-bit DEC
                     case 5:
                        MissingInstruction("DEC r[y]");
+                       return (address + 1);
                     break;
 
                     // 8-bit load immediate
                     case 6:
                        MissingInstruction("LD r[y], n");
+                       return (address + 2);
                     break;
 
                     // Assorted operations on accumulator/flags
@@ -503,27 +544,35 @@ void CPU_ExecuteInstruction(unsigned short address) {
                         switch (y) {
                             case 0:
                                 MissingInstruction("RLCA");
+                                return (address + 1);
                                 break;
                             case 1:
                                 MissingInstruction("RRCA");
+                                return (address + 1);
                                 break;
                             case 2:
                                 MissingInstruction("RLA");
+                                return (address + 1);
                                 break;
                             case 3:
                                 MissingInstruction("RRA");
+                                return (address + 1);
                                 break;
                             case 4:
                                 MissingInstruction("DAA");
+                                return (address + 1);
                                 break;
                             case 5:
                                 MissingInstruction("CPL");
+                                return (address + 1);
                                 break;
                             case 6:
                                 MissingInstruction("SCF");
+                                return (address + 1);
                                 break;
                             case 7:
                                 MissingInstruction("CCF");
+                                return (address + 1);
                                 break;
                         }
                     break;
@@ -534,16 +583,19 @@ void CPU_ExecuteInstruction(unsigned short address) {
                 // Exception (replaces LD (HL), (HL))
                 if (z == 6) {
                     MissingInstruction("HALT");
+                    return (address + 1);
                 }
                 // 8-bit loading
                 else {
                     MissingInstruction("LD r[y], r[z]");
+                    return (address + 1);
                 }
             break;
 
             case 2:
                 // Operate on accumulator and register/memory location
                 Table_alu_register(y, Table_r(z));
+                return (address + 1);
             break;
 
             case 3:
@@ -553,22 +605,27 @@ void CPU_ExecuteInstruction(unsigned short address) {
                         switch (y) {
                             case 0 ... 3:
                                 MissingInstruction("RET cc[y]");
+                                return (address + 1);
                                 break;
 
                             case 4:
                                 MissingInstruction("LD (0xFF00 + n), A");
+                                return (address + 2);
                                 break;
 
                             case 5:
                                 MissingInstruction("ADD SP, d");
+                                return (address + 2);
                                 break;
 
                             case 6:
                                 MissingInstruction("LD A, (0xFF00 + n)");
+                                return (address + 2);
                                 break;
 
                             case 7:
                                 MissingInstruction("LD HL, SP+ d");
+                                return (address + 2);
                                 break;
                         }
                         break;
@@ -578,16 +635,19 @@ void CPU_ExecuteInstruction(unsigned short address) {
                         switch (q) {
                             case 0:
                                 MissingInstruction("POP rp2[p]");
+                                return (address + 1);
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
                                         MissingInstruction("RET");
+                                        return (address + 1);
                                         break;
 
                                     case 1:
                                         MissingInstruction("RETI");
+                                        return (address + 1);
                                         break;
 
                                     case 2:
@@ -596,6 +656,7 @@ void CPU_ExecuteInstruction(unsigned short address) {
 
                                     case 3:
                                         MissingInstruction("LD SP, HL");
+                                        return (address + 1);
                                         break;
                                 }
                                 break;
@@ -606,23 +667,28 @@ void CPU_ExecuteInstruction(unsigned short address) {
                     case 2:
                         switch (y) {
                             case 0 ... 3:
+                                if
                                 MissingInstruction("JP cc[y], nn");
                                 break;
 
                             case 4:
                                 MissingInstruction("LD (0xFF00+C), A");
+                                return (address + 1);
                                 break;
 
                             case 5:
                                 MissingInstruction("LD (nn), A");
+                                return (address + 3);
                                 break;
 
                             case 6:
                                 MissingInstruction("LD A, (0xFF00+C)");
+                                return (address + 1);
                                 break;
 
                             case 7:
                                 MissingInstruction("LD A, (nn)");
+                                return (address + 3);
                                 break;
                         }
                     break;
@@ -636,10 +702,12 @@ void CPU_ExecuteInstruction(unsigned short address) {
 
                             case 6:
                                 MissingInstruction("DI");
+                                return (address + 1);
                                 break;
 
                             case 7:
                                 MissingInstruction("EI");
+                                return (address + 1);
                                 break;
                         }
                     break;
@@ -649,6 +717,7 @@ void CPU_ExecuteInstruction(unsigned short address) {
                         switch (y) {
                             case 0 ... 3:
                                 MissingInstruction("CALL cc[y], nn");
+                                return (address + 3);
                                 break;
                         }
                     break;
@@ -658,12 +727,14 @@ void CPU_ExecuteInstruction(unsigned short address) {
                         switch (q) {
                             case 0:
                                 MissingInstruction("PUSH rp2[p]");
+                                return (address + 1);
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
                                         MissingInstruction("CALL nn");
+                                        return (address + 3);
                                         break;
                                 }
                                 break;
@@ -673,20 +744,24 @@ void CPU_ExecuteInstruction(unsigned short address) {
                     // Operate on accumulator and immediate operand
                     case 6:
                         Table_alu(y, memoryBus.memory[address + 1]);
+                        return (address + 1);
                     break;
 
                     // Restart
                     case 7:
                         MissingInstruction("RST y*8");
+                        return (address + 1);
                     break;
                 }
             break;
         }
     }
+    return (address + 1);
 }
 
 void CPU_Step() {
     unsigned char instructionByte = Memory_ReadByte(memoryBus, pc);
 
-    CPU_ExecuteInstruction(pc);
+    unsigned short nextPC = CPU_ExecuteInstruction(pc);
+    pc += nextPC;
 }
