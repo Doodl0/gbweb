@@ -26,10 +26,9 @@ EMSCRIPTEN_KEEPALIVE int LoadFile(const uint8_t *buffer, size_t size) {
 
 #else
 
+// TODO: Check file size
 void LoadFile(char* filename) {
     FILE* file = fopen(filename, "rb");
-    SDL_Log("Attempting load file");
-
     unsigned char buffer[0x8000];
     unsigned char *ptr = buffer;
     fread(ptr, sizeof(unsigned char), 0x8000, file);

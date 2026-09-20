@@ -229,33 +229,6 @@ static void ADD_A(unsigned char value) {
     flagsRegister.subtract = false;
 }
 
-static void SUB(unsigned char value) {
-    registers.a = registers.a - value;
-
-    // Check if overflown from bit 7
-    if (value  > registers.a) flagsRegister.carry = true;
-    // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
-    // Check if 0
-    if (registers.a  == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = true;
-}
-
-static void SBC_A(unsigned char value) {
-    // Subtract carry flag and the input value from register A
-    registers.a = registers.a - value - (unsigned char)flagsRegister.carry;
-
-    // Check if overflown from bit 7
-    if (value > registers.a) flagsRegister.carry = true;
-    // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
-    // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = true;
-}
-
 static void AND(unsigned char value) {
     // Bitwise AND of A and value
     registers.a = registers.a & value;
@@ -270,18 +243,25 @@ static void AND(unsigned char value) {
     flagsRegister.subtract = false;
 }
 
-static void XOR(unsigned char value) {
-    // Bitwise XOR of A and value
-    registers.a = registers.a ^ value;
+static void JP(unsigned short value) {
+    pc = value;
+}
+
+static void JR(signed char value) {
+    JP(pc + value);
+}
+
+static void CP(unsigned char value) {
+    // Compare and set flags
 
     // Check if overflown from bit 7
-    flagsRegister.carry = false;
+    if (value  > registers.a) flagsRegister.carry = true;
     // Check if overflown from bit 3
-    flagsRegister.half_carry = false;
+    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
     // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
+    if (registers.a  == 0) flagsRegister.zero = true;
     // Is a subtract to set to false
-    flagsRegister.subtract = false;
+    flagsRegister.subtract = true;
 }
 
 static void OR(unsigned char value) {
@@ -298,8 +278,22 @@ static void OR(unsigned char value) {
     flagsRegister.subtract = false;
 }
 
-static void CP(unsigned char value) {
-    // Compare and set flags
+static void SBC_A(unsigned char value) {
+    // Subtract carry flag and the input value from register A
+    registers.a = registers.a - value - (unsigned char)flagsRegister.carry;
+
+    // Check if overflown from bit 7
+    if (value > registers.a) flagsRegister.carry = true;
+    // Check if overflown from bit 3
+    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = true;
+}
+
+static void SUB(unsigned char value) {
+    registers.a = registers.a - value;
 
     // Check if overflown from bit 7
     if (value  > registers.a) flagsRegister.carry = true;
@@ -309,6 +303,20 @@ static void CP(unsigned char value) {
     if (registers.a  == 0) flagsRegister.zero = true;
     // Is a subtract to set to false
     flagsRegister.subtract = true;
+}
+
+static void XOR(unsigned char value) {
+    // Bitwise XOR of A and value
+    registers.a = registers.a ^ value;
+
+    // Check if overflown from bit 7
+    flagsRegister.carry = false;
+    // Check if overflown from bit 3
+    flagsRegister.half_carry = false;
+    // Check if 0
+    if (registers.a == 0) flagsRegister.zero = true;
+    // Is a subtract to set to false
+    flagsRegister.subtract = false;
 }
 
 // Instruction tables
@@ -432,6 +440,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
         unsigned char z = memoryBus.memory[address] & 0x07;
         unsigned char p = y >> 1;
         unsigned char q = y % 2;
+        unsigned short nn = ((unsigned short)(memoryBus.memory[address + 1]) << 8) + memoryBus.memory[address + 2];
 
         switch (x) {
             case 0:
@@ -452,11 +461,10 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return (address + 1);
                                 break;
                             case 3:
-                                MissingInstruction("JR d");
-                                return (address + 2);
+                                JR((signed char) memoryBus.memory[address + 1] + 1);
                                 break;
                             case 4 ... 7:
-                                if (ConditionCodeCheck(Table_cc(y))) MissingInstruction("JR d");
+                                if (ConditionCodeCheck(Table_cc(y))) JR((signed char) memoryBus.memory[address + 1] + 1);
                                 else return (address + 2);
                                 break;
                         }
@@ -665,7 +673,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                         break;
 
                                     case 2:
-                                        MissingInstruction("JP HL");
+                                        JP(registers.hl);
                                         break;
 
                                     case 3:
@@ -681,7 +689,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 2:
                         switch (y) {
                             case 0 ... 3:
-                                if (ConditionCodeCheck(Table_cc(y))) MissingInstruction("JP nn");
+                                if (ConditionCodeCheck(Table_cc(y))) JP(nn);
                                 else return (address + 3);
                                 break;
 
@@ -711,7 +719,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 3:
                         switch (y) {
                             case 0:
-                                MissingInstruction("JP nn");
+                                JP(nn);
                                 break;
 
                             case 6:
@@ -774,10 +782,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 }
 
 void CPU_Step() {
-    unsigned char instructionByte = Memory_ReadByte(memoryBus, pc);
-
-    unsigned short nextPC = CPU_ExecuteInstruction(pc);
-    pc += nextPC;
+    pc = CPU_ExecuteInstruction(pc);
 }
 
 void CPU_Init() {
