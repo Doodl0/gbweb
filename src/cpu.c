@@ -1,12 +1,19 @@
+#include "SDL3/SDL_log.h"
 #include <registers.h>
 #include <memory.h>
 #include <SDL3/SDL.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <cpu.h>
+#include <string.h>
 
 // Function for missing instruction
 static void MissingInstruction(char *instruction) {
     SDL_Log("Missing function %s", instruction);
     SDL_Quit();
+    exit(1);
 }
 
 // Memory and registers
@@ -14,6 +21,13 @@ struct registers registers;
 struct flagsRegister flagsRegister;
 unsigned short pc;
 struct memoryBus memoryBus;
+
+void SetMemory(unsigned char* buffer, size_t size) {
+    for (size_t i = 0; i < size - 1; i++) {
+        memoryBus.memory[i] = buffer[i];
+    }
+    SDL_Log("ROM %.16s loaded into GB memory, buffer %p size %d", (&memoryBus.memory[0]) + 0x134, &memoryBus.memory, 0x8000);
+}
 
 // Modifiying registers based on enums
 void WriteToR8(enum r8Enum target, unsigned char value) {
@@ -442,8 +456,8 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return (address + 2);
                                 break;
                             case 4 ... 7:
-                                MissingInstruction("JR cc[y-4], d");
-                                return (address + 2);
+                                if (ConditionCodeCheck(Table_cc(y))) MissingInstruction("JR d");
+                                else return (address + 2);
                                 break;
                         }
                     break;
@@ -604,7 +618,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 0:
                         switch (y) {
                             case 0 ... 3:
-                                MissingInstruction("RET cc[y]");
+                                if (ConditionCodeCheck(Table_cc(y))) MissingInstruction("RET");
                                 return (address + 1);
                                 break;
 
@@ -667,8 +681,8 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 2:
                         switch (y) {
                             case 0 ... 3:
-                                if
-                                MissingInstruction("JP cc[y], nn");
+                                if (ConditionCodeCheck(Table_cc(y))) MissingInstruction("JP nn");
+                                else return (address + 3);
                                 break;
 
                             case 4:
@@ -716,7 +730,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 4:
                         switch (y) {
                             case 0 ... 3:
-                                MissingInstruction("CALL cc[y], nn");
+                                if (ConditionCodeCheck(Table_cc(y))) MissingInstruction("CALL nn");
                                 return (address + 3);
                                 break;
                         }
@@ -764,4 +778,8 @@ void CPU_Step() {
 
     unsigned short nextPC = CPU_ExecuteInstruction(pc);
     pc += nextPC;
+}
+
+void CPU_Init() {
+    pc = 0;
 }

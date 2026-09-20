@@ -5,6 +5,7 @@
 #include <SDL3/SDL_log.h>
 #include <input.h>
 #include <file.h>
+#include <cpu.h>
 #include <stdio.h>
 
 #ifdef __EMSCRIPTEN__
@@ -25,6 +26,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_APP_FAILURE;
     }
 
+    CPU_Init();
+
     return SDL_APP_CONTINUE;
 }
 
@@ -41,7 +44,7 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 // Per frame iteration
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
-    char* message = "Hello World";
+    char* message = "No ROM loaded";
     int w = 0, h = 0;
     float x, y;
     const float scale = 4.0f;
@@ -58,6 +61,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderDebugText(renderer, x, y, message);
     SDL_RenderPresent(renderer);
+
+    //CPU_Step();
+
     return SDL_APP_CONTINUE;
 }
 

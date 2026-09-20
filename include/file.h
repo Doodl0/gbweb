@@ -7,4 +7,8 @@ void OpenFileDialog();
 
 EMSCRIPTEN_KEEPALIVE int LoadFile(char* filename, char *buffer, size_t size, void *callback_data);
 
+#else
+
+void LoadFile(char* filename);
+
 #endif
