@@ -1,7 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <SDL3/SDL.h>
-#include <stdlib.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>

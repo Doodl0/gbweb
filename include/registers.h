@@ -42,6 +42,10 @@ struct registers {
             unsigned short hl;
         };
     };
+
+    unsigned short pc;
+    unsigned short sp;
+
 } extern registers;
 
 struct flagsRegister {

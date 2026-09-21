@@ -19,7 +19,6 @@ static void MissingInstruction(char *instruction) {
 // Memory and registers
 struct registers registers;
 struct flagsRegister flagsRegister;
-unsigned short pc;
 struct memoryBus memoryBus;
 
 void SetMemory(unsigned char* buffer, size_t size) {
@@ -53,6 +52,28 @@ void WriteToR8(enum r8Enum target, unsigned char value) {
         case L:
             registers.l = value;
             break;
+        case HL8:
+            memoryBus.memory[registers.hl] = value;
+    }
+}
+
+void WriteToR16(enum r16Enum target, unsigned short value) {
+    switch (target) {
+        case BC:
+            registers.bc = value;
+            break;
+        case DE:
+            registers.de = value;
+            break;
+        case HL:
+            registers.hl = value;
+            break;
+        case SP:
+            registers.sp = value;
+            break;
+        case AF:
+            registers.af = value;
+            break;
     }
 }
 
@@ -79,6 +100,30 @@ unsigned char ReadFromR8(enum r8Enum r) {
             break;
         case L:
             value = registers.l;
+            break;
+        case HL8:
+            value = memoryBus.memory[registers.hl] ;
+    }
+    return value;
+}
+
+unsigned short ReadFromR16(enum r16Enum r) {
+    unsigned short value;
+    switch (r) {
+        case BC:
+            value = registers.bc;
+            break;
+        case DE:
+            value = registers.de;
+            break;
+        case HL:
+            value = registers.hl;
+            break;
+        case SP:
+            value = registers.sp;
+            break;
+        case AF:
+            value = registers.af;
             break;
     }
     return value;
@@ -243,14 +288,6 @@ static void AND(unsigned char value) {
     flagsRegister.subtract = false;
 }
 
-static void JP(unsigned short value) {
-    pc = value;
-}
-
-static void JR(signed char value) {
-    JP(pc + value);
-}
-
 static void CP(unsigned char value) {
     // Compare and set flags
 
@@ -262,6 +299,34 @@ static void CP(unsigned char value) {
     if (registers.a  == 0) flagsRegister.zero = true;
     // Is a subtract to set to false
     flagsRegister.subtract = true;
+}
+
+static void JP(unsigned short value) {
+    registers.pc = value;
+}
+
+static void JR(signed char value) {
+    JP(registers.pc + value);
+}
+
+// Copy from byte at address n16 into A
+static void LD_A_n16(unsigned short value) {
+    WriteToR8(A, memoryBus.memory[value]);
+}
+
+// Copy from n8 into r8
+static void LD_r8_n8(enum r8Enum r8Target, unsigned char value) {
+    WriteToR8(r8Target, value);
+}
+
+// Copy from n8 into byte at address n16
+static void LD_n16_n8(unsigned short target, unsigned char value) {
+    memoryBus.memory[target] = value;
+}
+
+// Copy from value into r16
+static void LD_r16_n16(enum r16Enum r16, unsigned short value) {
+    WriteToR16(r16, value);
 }
 
 static void OR(unsigned char value) {
@@ -276,6 +341,30 @@ static void OR(unsigned char value) {
     if (registers.a == 0) flagsRegister.zero = true;
     // Is a subtract to set to false
     flagsRegister.subtract = false;
+}
+
+static void POP(enum r16Enum r) {
+    unsigned char lsb = memoryBus.memory[registers.sp];
+    registers.sp++;
+    unsigned char msb = memoryBus.memory[registers.sp];
+    registers.sp++;
+    WriteToR16(r, (unsigned short)((msb << 8) | lsb));
+}
+
+static void PUSH(enum r16Enum r) {
+    registers.sp--;
+    memoryBus.memory[registers.sp] = (unsigned char)((ReadFromR16(r) & 0xFF00) >> 8);
+    registers.sp--;
+    memoryBus.memory[registers.sp] = (unsigned char)((ReadFromR16(r) & 0x00FF));
+}
+
+static void CALL(unsigned short value) {
+    PUSH(registers.pc + 3);
+    JP(value);
+}
+
+static void RET() {
+    POP(registers.pc);
 }
 
 static void SBC_A(unsigned char value) {
@@ -352,22 +441,11 @@ static void Table_alu(unsigned int index, unsigned char value) {
 }
 // alu table but accepts a register input, then passes value to main alu function
 static void Table_alu_register(unsigned int index, enum r8Enum r) {
-        if (r == HL8) {
-            Table_alu(index, memoryBus.memory[registers.hl]);
-        }
-        else {
-            Table_alu(index, ReadFromR8(r));
-        }
+    Table_alu(index, ReadFromR8(r));
 }
 // Rotation/shift operations
 static void Table_rot(unsigned int index, enum r8Enum r) {
-    unsigned char value = 0;
-    if (r == HL8) {
-        value = memoryBus.memory[registers.hl];
-    }
-    else {
-        value = ReadFromR8(r);
-    }
+    unsigned char value = ReadFromR8(r);
 
     switch (index) {
         case 0:
@@ -474,7 +552,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 1:
                         switch (q) {
                             case 0:
-                                MissingInstruction("LD rp[p], nn");
+                                LD_r16_n16(Table_rp(p), nn);
                                 return (address + 3);
                                 break;
                             case 1:
@@ -490,38 +568,42 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                             case 0:
                                 switch (p) {
                                     case 0:
-                                        MissingInstruction("LD (BC), A");
+                                        LD_n16_n8(memoryBus.memory[registers.bc], registers.a);
                                         return (address + 1);
                                         break;
                                     case 1:
-                                        MissingInstruction("LD (DE), A");
+                                        LD_n16_n8(memoryBus.memory[registers.de], registers.a);
                                         return (address + 1);
                                         break;
                                     case 2:
-                                        MissingInstruction("LD (HL+), A");
+                                        LD_n16_n8(memoryBus.memory[registers.hl], registers.a);
+                                        registers.hl++;
                                         return (address + 1);
                                         break;
                                     case 3:
-                                        MissingInstruction("LD (HL-), A");
+                                        LD_n16_n8(memoryBus.memory[registers.hl], registers.a);
+                                        registers.hl--;
                                         return (address + 1);
                                         break;
                                 }
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        MissingInstruction("LD A, (BC)");
+                                        LD_r8_n8(A, memoryBus.memory[registers.bc]);
                                         return (address + 1);
                                         break;
                                     case 1:
-                                        MissingInstruction("LD A, (DE)");
+                                        LD_r8_n8(A, memoryBus.memory[registers.de]);
                                         return (address + 1);
                                         break;
                                     case 2:
-                                        MissingInstruction("LD A, (HL+)");
+                                        LD_r8_n8(A, memoryBus.memory[registers.hl]);
+                                        registers.hl++;
                                         return (address + 1);
                                         break;
                                     case 3:
-                                        MissingInstruction("LD A, (HL-)");
+                                        LD_r8_n8(A, memoryBus.memory[registers.hl]);
+                                        registers.hl--;
                                         return (address + 1);
                                         break;
                                 }
@@ -557,7 +639,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 
                     // 8-bit load immediate
                     case 6:
-                       MissingInstruction("LD r[y], n");
+                        LD_r8_n8(Table_r(y), memoryBus.memory[address + 1]);
                        return (address + 2);
                     break;
 
@@ -609,7 +691,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                 }
                 // 8-bit loading
                 else {
-                    MissingInstruction("LD r[y], r[z]");
+                    LD_r8_n8(Table_r(y), ReadFromR8(Table_r(z)));
                     return (address + 1);
                 }
             break;
@@ -631,7 +713,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 break;
 
                             case 4:
-                                MissingInstruction("LD (0xFF00 + n), A");
+                                LD_n16_n8(memoryBus.memory[(0xFF00 + memoryBus.memory[address + 1])], registers.a);
                                 return (address + 2);
                                 break;
 
@@ -641,7 +723,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 break;
 
                             case 6:
-                                MissingInstruction("LD A, (0xFF00 + n)");
+                                LD_r8_n8(A, memoryBus.memory[(0xFF00 + memoryBus.memory[address + 1])]);
                                 return (address + 2);
                                 break;
 
@@ -694,22 +776,22 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 break;
 
                             case 4:
-                                MissingInstruction("LD (0xFF00+C), A");
+                                LD_n16_n8(memoryBus.memory[(0xFF00 + registers.c)], registers.a);
                                 return (address + 1);
                                 break;
 
                             case 5:
-                                MissingInstruction("LD (nn), A");
+                                LD_n16_n8(memoryBus.memory[(nn)], registers.a);
                                 return (address + 3);
                                 break;
 
                             case 6:
-                                MissingInstruction("LD A, (0xFF00+C)");
+                                LD_A_n16(0xFF00 + registers.c);
                                 return (address + 1);
                                 break;
 
                             case 7:
-                                MissingInstruction("LD A, (nn)");
+                                LD_A_n16(nn);
                                 return (address + 3);
                                 break;
                         }
@@ -782,9 +864,15 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 }
 
 void CPU_Step() {
-    pc = CPU_ExecuteInstruction(pc);
+    // Convert flags register to binary for any needed arithmetic
+    ConvertFlagsRegisterToChar(flagsRegister);
+
+    registers.pc = CPU_ExecuteInstruction(registers.pc);
+
+    // Convert flags register back to bools for easy use
+    ConvertCharToFlagRegister(registers.f);
 }
 
 void CPU_Init() {
-    pc = 0;
+    registers.pc = 0;
 }
