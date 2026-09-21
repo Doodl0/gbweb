@@ -14,16 +14,16 @@
 #define HALF_CARRY_FLAG_BIT_POSITION (char)(1<<5)
 #define CARRY_FLAG_BIT_POSITION (char)(1<<4)
 
-// Function for missing instruction
-static void MissingInstruction(char *instruction) {
-    SDL_Log("Missing function %s", instruction);
-    SDL_Quit();
-    exit(1);
-}
-
 // Memory and registers
 struct registers registers;
 struct memoryBus memoryBus;
+
+// Function for missing instruction
+static void MissingInstruction(char *instruction) {
+    SDL_Log("Missing function %s, %02X, pc = %02X", instruction, memoryBus.memory[registers.pc], registers.pc);
+    SDL_Quit();
+    exit(1);
+}
 
 // Value must be 1 or 0
 void SetFlag(enum flags flag, unsigned int value) {
@@ -85,6 +85,7 @@ void SetMemory(unsigned char* buffer, size_t size) {
         memoryBus.memory[i] = buffer[i];
     }
     SDL_Log("ROM %.16s loaded into GB memory, buffer %p size %zu", (&memoryBus.memory[0]) + 0x134, &memoryBus.memory, size);
+    CPU_Init();
 }
 
 // Modifiying registers based on enums
@@ -367,12 +368,12 @@ static void CP(unsigned char value) {
     SetFlag(SUBTRACT, 1);
 }
 
-static void JP(unsigned short value) {
-    registers.pc = value;
+static unsigned short JP(unsigned short value) {
+    return value;
 }
 
-static void JR(signed char value) {
-    JP(registers.pc + value);
+static unsigned short JR(signed char value) {
+    return JP(registers.pc + value);
 }
 
 // Copy from byte at address n16 into A
@@ -394,6 +395,8 @@ static void LD_n16_n8(unsigned short target, unsigned char value) {
 static void LD_r16_n16(enum r16Enum r16, unsigned short value) {
     WriteToR16(r16, value);
 }
+
+static void NOP() {}
 
 static void OR(unsigned char value) {
     // Bitwise XOR of A and value
@@ -425,9 +428,9 @@ static void PUSH(enum r16Enum r) {
     memoryBus.memory[registers.sp] = (unsigned char)((ReadFromR16(r) & 0x00FF));
 }
 
-static void CALL(unsigned short value) {
+static unsigned short CALL(unsigned short value) {
     PUSH(registers.pc + 3);
-    JP(value);
+    return JP(value);
 }
 
 static void RET() {
@@ -592,7 +595,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
         unsigned char z = memoryBus.memory[address] & 0x07;
         unsigned char p = y >> 1;
         unsigned char q = y % 2;
-        unsigned short nn = ((unsigned short)(memoryBus.memory[address + 1]) << 8) + memoryBus.memory[address + 2];
+        unsigned short nn = ((unsigned short)(memoryBus.memory[address + 1])) | (((unsigned short)memoryBus.memory[address + 2]) << 8);
 
         switch (x) {
             case 0:
@@ -601,7 +604,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 0:
                         switch (y) {
                             case 0:
-                                MissingInstruction("NOP");
+                                NOP();
                                 return (address + 1);
                                 break;
                             case 1:
@@ -613,10 +616,10 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return (address + 1);
                                 break;
                             case 3:
-                                JR((signed char) memoryBus.memory[address + 1] + 1);
+                                return JR((signed char) memoryBus.memory[address + 1] + 1);
                                 break;
                             case 4 ... 7:
-                                if (ConditionCodeCheck(Table_cc(y))) JR((signed char) memoryBus.memory[address + 1] + 1);
+                                if (ConditionCodeCheck(Table_cc(y))) return JR((signed char) memoryBus.memory[address + 1] + 1);
                                 else return (address + 2);
                                 break;
                         }
@@ -829,7 +832,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                         break;
 
                                     case 2:
-                                        JP(registers.hl);
+                                        return JP(registers.hl);
                                         break;
 
                                     case 3:
@@ -845,7 +848,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 2:
                         switch (y) {
                             case 0 ... 3:
-                                if (ConditionCodeCheck(Table_cc(y))) JP(nn);
+                                if (ConditionCodeCheck(Table_cc(y))) return JP(nn);
                                 else return (address + 3);
                                 break;
 
@@ -875,7 +878,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 3:
                         switch (y) {
                             case 0:
-                                JP(nn);
+                                return JP(nn);
                                 break;
 
                             case 6:
@@ -894,8 +897,8 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 4:
                         switch (y) {
                             case 0 ... 3:
-                                if (ConditionCodeCheck(Table_cc(y))) CALL(nn);
-                                return (address + 3);
+                                if (ConditionCodeCheck(Table_cc(y))) return CALL(nn);
+                                else return (address + 3);
                                 break;
                         }
                     break;
@@ -911,8 +914,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        CALL(nn);
-                                        return (address + 3);
+                                        return CALL(nn);
                                         break;
                                 }
                                 break;
@@ -938,9 +940,10 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 }
 
 void CPU_Step() {
+    SDL_Log("Executed %02X, pc = %02X", memoryBus.memory[registers.pc], registers.pc);
     registers.pc = CPU_ExecuteInstruction(registers.pc);
 }
 
 void CPU_Init() {
-    registers.pc = 0;
+    registers.pc = 0x100;
 }

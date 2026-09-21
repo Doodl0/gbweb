@@ -33,7 +33,7 @@ void LoadFile(char* filename) {
     unsigned char *ptr = buffer;
     fread(ptr, sizeof(unsigned char), 0x8000, file);
 
-    SDL_Log("ROM %.16s loaded from file, buffer %p size %zu" , ptr + 0x134, &ptr, 0x8000);
+    SDL_Log("ROM %.16s loaded from file, buffer %p size %zu" , ptr + 0x134, &ptr, (unsigned long)0x8000);
 
     SetMemory(ptr,0x8000);
     fclose(file);

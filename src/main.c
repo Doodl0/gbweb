@@ -62,7 +62,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     SDL_RenderDebugText(renderer, x, y, message);
     SDL_RenderPresent(renderer);
 
-    //CPU_Step();
+    CPU_Step();
 
     return SDL_APP_CONTINUE;
 }
