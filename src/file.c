@@ -17,10 +17,11 @@
 
 EMSCRIPTEN_KEEPALIVE int LoadFile(const uint8_t *buffer, size_t size) {
   /// Load a file - this function is called from javascript when the file upload is activated
-  SDL_Log("ROM %.16s loaded, buffer %p size %d", buffer + 0x134, &buffer, size);
+  SDL_Log("ROM %.16s loaded, buffer %p size %zu", buffer + 0x134, &buffer, size);
 
   // do whatever you need with the file contents
   SetMemory((unsigned char *) buffer, size);
+  return 0;
 }
 
 #else
@@ -32,7 +33,7 @@ void LoadFile(char* filename) {
     unsigned char *ptr = buffer;
     fread(ptr, sizeof(unsigned char), 0x8000, file);
 
-    SDL_Log("ROM %.16s loaded from file, buffer %p size %d" , ptr + 0x134, &ptr, 0x8000);
+    SDL_Log("ROM %.16s loaded from file, buffer %p size %zu" , ptr + 0x134, &ptr, 0x8000);
 
     SetMemory(ptr,0x8000);
     fclose(file);

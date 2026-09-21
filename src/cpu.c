@@ -9,6 +9,11 @@
 #include <cpu.h>
 #include <string.h>
 
+#define ZERO_FLAG_BIT_POSITION (char)(1<<7)
+#define SUBTRACT_FLAG_BIT_POSITION (char)(1<<6)
+#define HALF_CARRY_FLAG_BIT_POSITION (char)(1<<5)
+#define CARRY_FLAG_BIT_POSITION (char)(1<<4)
+
 // Function for missing instruction
 static void MissingInstruction(char *instruction) {
     SDL_Log("Missing function %s", instruction);
@@ -18,14 +23,68 @@ static void MissingInstruction(char *instruction) {
 
 // Memory and registers
 struct registers registers;
-struct flagsRegister flagsRegister;
 struct memoryBus memoryBus;
+
+// Value must be 1 or 0
+void SetFlag(enum flags flag, unsigned int value) {
+    if (value != 0) {
+        switch(flag) {
+            case ZERO:
+                registers.f |= ZERO_FLAG_BIT_POSITION;
+                break;
+            case SUBTRACT:
+                registers.f |= SUBTRACT_FLAG_BIT_POSITION;
+                break;
+            case HALF_CARRY:
+                registers.f |= HALF_CARRY_FLAG_BIT_POSITION;
+                break;
+            case CARRY:
+                registers.f |= CARRY_FLAG_BIT_POSITION;
+                break;
+        }
+    }
+    else {
+        switch(flag) {
+            case ZERO:
+                registers.f &= ~(ZERO_FLAG_BIT_POSITION);
+                break;
+            case SUBTRACT:
+                registers.f &= ~(SUBTRACT_FLAG_BIT_POSITION);
+                break;
+            case HALF_CARRY:
+                registers.f &= ~(HALF_CARRY_FLAG_BIT_POSITION);
+                break;
+            case CARRY:
+                registers.f &= ~(CARRY_FLAG_BIT_POSITION);
+                break;
+        }
+    }
+}
+
+unsigned int GetFlag(enum flags flag) {
+    unsigned int bit;
+    switch(flag) {
+        case ZERO:
+            bit = (registers.f & (ZERO_FLAG_BIT_POSITION) >> 7);
+            break;
+        case SUBTRACT:
+            bit = (registers.f & (SUBTRACT_FLAG_BIT_POSITION) >> 6);
+            break;
+        case HALF_CARRY:
+            bit = (registers.f & (HALF_CARRY_FLAG_BIT_POSITION) >> 5);
+            break;
+        case CARRY:
+            bit = (registers.f & (CARRY) >> 4);
+            break;
+    }
+    return bit;
+}
 
 void SetMemory(unsigned char* buffer, size_t size) {
     for (size_t i = 0; i < size - 1; i++) {
         memoryBus.memory[i] = buffer[i];
     }
-    SDL_Log("ROM %.16s loaded into GB memory, buffer %p size %d", (&memoryBus.memory[0]) + 0x134, &memoryBus.memory, 0x8000);
+    SDL_Log("ROM %.16s loaded into GB memory, buffer %p size %zu", (&memoryBus.memory[0]) + 0x134, &memoryBus.memory, size);
 }
 
 // Modifiying registers based on enums
@@ -133,16 +192,16 @@ unsigned short ReadFromR16(enum r16Enum r) {
 bool ConditionCodeCheck(enum ccEnum cc) {
     switch(cc) {
         case Z:
-            if (flagsRegister.zero) return true;
+            if (GetFlag(ZERO)) return true;
             break;
         case NZ:
-            if (!flagsRegister.zero) return true;
+            if (!GetFlag(ZERO)) return true;
             break;
         case CA:
-            if (flagsRegister.carry) return true;
+            if (GetFlag(CARRY)) return true;
             break;
         case NC:
-            if (!flagsRegister.carry) return true;
+            if (!GetFlag(CARRY)) return true;
             break;
     }
     return false;
@@ -242,19 +301,22 @@ static enum ccEnum Table_cc(unsigned int index) {
 // Instructions
 static void ADC_A(unsigned char value) {
     // Add carry flag, register A and the input value
-    int result = registers.a + (value + (int)flagsRegister.carry);
+    int result = registers.a + (value + (unsigned char)GetFlag(CARRY));
 
     // Make sure the value is shortened to 8 bits
     registers.a = (unsigned char)(result & 0xff);
 
     // Check if overflown from bit 7
-    if (result & 0xFF00) flagsRegister.carry = true;
+    if (result & 0xFF00) SetFlag(CARRY, 1);
+    else SetFlag(CARRY, 0);
     // Check if overflown from bit 3
-    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) flagsRegister.half_carry = true;
+    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) SetFlag(HALF_CARRY, 1);
+    else SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (result == 0) flagsRegister.zero = true;
-    // Not a subtract to set to false
-    flagsRegister.subtract = false;
+    if (result == 0) SetFlag(ZERO, 1);
+    else SetFlag(ZERO, 0);
+    // Not a subtract so set to false
+    SetFlag(SUBTRACT, 0);
 }
 
 static void ADD_A(unsigned char value) {
@@ -265,40 +327,44 @@ static void ADD_A(unsigned char value) {
     registers.a = (unsigned char)(result & 0xff);
 
     // Check if overflown from bit 7
-    if (result & 0xFF00) flagsRegister.carry = true;
+    if (result & 0xFF00) SetFlag(CARRY, 1);
+    else SetFlag(CARRY, 0);
     // Check if overflown from bit 3
-    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) flagsRegister.half_carry = true;
+    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) SetFlag(HALF_CARRY, 1);
+    else SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (result == 0) flagsRegister.zero = true;
-    // Not a subtract to set to false
-    flagsRegister.subtract = false;
+    if (result == 0) SetFlag(ZERO, 1);
+    else SetFlag(ZERO, 0);
+    // Not a subtract so set to false
+    SetFlag(SUBTRACT, 0);
 }
 
 static void AND(unsigned char value) {
     // Bitwise AND of A and value
     registers.a = registers.a & value;
 
-    // Check if overflown from bit 7
-    flagsRegister.carry = false;
-    // Check if overflown from bit 3
-    flagsRegister.half_carry = true;
+    SetFlag(CARRY, 0);
+    SetFlag(HALF_CARRY, 1);
     // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = false;
+    if (registers.a == 0) SetFlag(ZERO, 1);
+    else SetFlag(ZERO, 0);
+    SetFlag(SUBTRACT, 0);
 }
 
 static void CP(unsigned char value) {
     // Compare and set flags
 
     // Check if overflown from bit 7
-    if (value  > registers.a) flagsRegister.carry = true;
+    if (value  > registers.a) SetFlag(CARRY, 1);
+    else SetFlag(CARRY, 0);
     // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    if ((value & 0x0F) > (registers.a & 0x0F)) SetFlag(HALF_CARRY, 1);
+    else SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (registers.a  == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = true;
+    if (registers.a  == 0) SetFlag(ZERO, 1);
+    else SetFlag(ZERO, 0);
+    // Is a subtract so set to true
+    SetFlag(SUBTRACT, 1);
 }
 
 static void JP(unsigned short value) {
@@ -334,13 +400,14 @@ static void OR(unsigned char value) {
     registers.a = registers.a | value;
 
     // Check if overflown from bit 7
-    flagsRegister.carry = false;
+    SetFlag(CARRY, 0);
     // Check if overflown from bit 3
-    flagsRegister.half_carry = false;
+    SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
+    if (registers.a  == 0) SetFlag(ZERO, 1);
+    else SetFlag(ZERO, 0);
     // Is a subtract to set to false
-    flagsRegister.subtract = false;
+    SetFlag(SUBTRACT, 0);
 }
 
 static void POP(enum r16Enum r) {
@@ -369,29 +436,35 @@ static void RET() {
 
 static void SBC_A(unsigned char value) {
     // Subtract carry flag and the input value from register A
-    registers.a = registers.a - value - (unsigned char)flagsRegister.carry;
+    registers.a = registers.a - value - (unsigned char)GetFlag(CARRY);
 
     // Check if overflown from bit 7
-    if (value > registers.a) flagsRegister.carry = true;
+    if (value  > registers.a) SetFlag(CARRY, 1);
+    else SetFlag(CARRY, 0);
     // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    if ((value & 0x0F) > (registers.a & 0x0F)) SetFlag(HALF_CARRY, 1);
+    else SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = true;
+    if (registers.a  == 0) SetFlag(ZERO, 1);
+    else SetFlag(ZERO, 0);
+    // Is a subtract so set to true
+    SetFlag(SUBTRACT, 1);
 }
 
 static void SUB(unsigned char value) {
     registers.a = registers.a - value;
 
     // Check if overflown from bit 7
-    if (value  > registers.a) flagsRegister.carry = true;
+    if (value  > registers.a) SetFlag(CARRY, 1);
+    else SetFlag(CARRY, 0);
     // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) flagsRegister.half_carry = true;
+    if ((value & 0x0F) > (registers.a & 0x0F)) SetFlag(HALF_CARRY, 1);
+    else SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (registers.a  == 0) flagsRegister.zero = true;
-    // Is a subtract to set to false
-    flagsRegister.subtract = true;
+    if (registers.a  == 0) SetFlag(ZERO, 1);
+    else SetFlag(ZERO, 0);
+    // Is a subtract so set to true
+    SetFlag(SUBTRACT, 1);
 }
 
 static void XOR(unsigned char value) {
@@ -399,13 +472,14 @@ static void XOR(unsigned char value) {
     registers.a = registers.a ^ value;
 
     // Check if overflown from bit 7
-    flagsRegister.carry = false;
+    SetFlag(CARRY, 0);
     // Check if overflown from bit 3
-    flagsRegister.half_carry = false;
+    SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (registers.a == 0) flagsRegister.zero = true;
+    if (registers.a  == 0) SetFlag(ZERO, 1);
+    else SetFlag(ZERO, 0);
     // Is a subtract to set to false
-    flagsRegister.subtract = false;
+    SetFlag(SUBTRACT, 0);
 }
 
 // Instruction tables
@@ -738,14 +812,14 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 1:
                         switch (q) {
                             case 0:
-                                MissingInstruction("POP rp2[p]");
+                                POP(Table_rp2(p));
                                 return (address + 1);
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        MissingInstruction("RET");
+                                        RET();
                                         return (address + 1);
                                         break;
 
@@ -820,7 +894,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 4:
                         switch (y) {
                             case 0 ... 3:
-                                if (ConditionCodeCheck(Table_cc(y))) MissingInstruction("CALL nn");
+                                if (ConditionCodeCheck(Table_cc(y))) CALL(nn);
                                 return (address + 3);
                                 break;
                         }
@@ -830,14 +904,14 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 5:
                         switch (q) {
                             case 0:
-                                MissingInstruction("PUSH rp2[p]");
+                                PUSH(Table_rp2(p));
                                 return (address + 1);
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        MissingInstruction("CALL nn");
+                                        CALL(nn);
                                         return (address + 3);
                                         break;
                                 }
@@ -864,13 +938,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 }
 
 void CPU_Step() {
-    // Convert flags register to binary for any needed arithmetic
-    ConvertFlagsRegisterToChar(flagsRegister);
-
     registers.pc = CPU_ExecuteInstruction(registers.pc);
-
-    // Convert flags register back to bools for easy use
-    ConvertCharToFlagRegister(registers.f);
 }
 
 void CPU_Init() {

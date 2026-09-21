@@ -48,11 +48,11 @@ struct registers {
 
 } extern registers;
 
-struct flagsRegister {
-    bool zero;
-    bool subtract;
-    bool half_carry;
-    bool carry;
+enum flags {
+    ZERO,
+    SUBTRACT,
+    HALF_CARRY,
+    CARRY
 };
 
 // 8-bit registers
@@ -67,6 +67,3 @@ enum r16Enum {
 enum ccEnum {
     NZ, Z, NC, CA
 };
-
-unsigned char ConvertFlagsRegisterToChar(struct flagsRegister flagsRegister);
-struct flagsRegister ConvertCharToFlagRegister(unsigned char flags);
