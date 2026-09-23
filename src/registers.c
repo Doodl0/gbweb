@@ -48,13 +48,6 @@ struct registers {
 
 } extern registers;
 
-struct flagsRegister {
-    bool zero;
-    bool subtract;
-    bool half_carry;
-    bool carry;
-};
-
 enum flags {
     ZERO,
     SUBTRACT,

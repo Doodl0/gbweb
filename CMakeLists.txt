@@ -17,6 +17,7 @@ set(SOURCE_FILES
   src/registers.c
   src/cpu.c
   src/memory.c
+  src/cycles.c
 )
 
 include_directories(include)

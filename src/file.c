@@ -12,7 +12,6 @@
 // Based on stackoverflow.com/questions/69935188/open-a-file-in-emscripten-using-browser-file-selector-dialogue
 // and github.com/Armchair-Software/emscripten-browser-file
 
-
 #ifdef __EMSCRIPTEN__
 
 EMSCRIPTEN_KEEPALIVE int LoadFile(const uint8_t *buffer, size_t size) {

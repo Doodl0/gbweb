@@ -61,7 +61,7 @@ enum r8Enum {
 };
 // Register pairs
 enum r16Enum {
-    BC, DE, HL, SP, AF
+    BC, DE, HL, SP, AF, PC
 };
 // Conditions
 enum ccEnum {
