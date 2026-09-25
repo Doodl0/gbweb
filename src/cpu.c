@@ -1,4 +1,4 @@
-#include "SDL3/SDL_log.h"
+#include <SDL3/SDL_log.h>
 #include <SDL3/SDL.h>
 #include <stdlib.h>
 #include <cpu.h>
@@ -12,7 +12,7 @@
 // Memory and registers
 struct registers registers;
 struct memoryBus memoryBus;
-unsigned char ime;
+unsigned char ime = 0;
 
 // Function for missing instruction
 static void MissingInstruction(char *instruction) {
@@ -61,18 +61,19 @@ unsigned int GetFlag(enum flags flag) {
     unsigned int bit;
     switch(flag) {
         case ZERO:
-            bit = (registers.f & (ZERO_FLAG_BIT_POSITION));
+            bit = (registers.f & (ZERO_FLAG_BIT_POSITION)) >> 7;
             break;
         case SUBTRACT:
-            bit = (registers.f & (SUBTRACT_FLAG_BIT_POSITION));
+            bit = (registers.f & (SUBTRACT_FLAG_BIT_POSITION)) >> 6;
             break;
         case HALF_CARRY:
-            bit = (registers.f & (HALF_CARRY_FLAG_BIT_POSITION));
+            bit = (registers.f & (HALF_CARRY_FLAG_BIT_POSITION)) >> 5;
             break;
         case CARRY:
-            bit = (registers.f & (CARRY));
+            bit = (registers.f & (CARRY_FLAG_BIT_POSITION)) >> 4;
             break;
     }
+    //SDL_Log("F: %02X Z: %u C: %i", registers.f, ((registers.f & (ZERO_FLAG_BIT_POSITION)) >> 7), ((registers.f & (CARRY_FLAG_BIT_POSITION)) >> 4));
     return bit;
 }
 
@@ -196,16 +197,16 @@ unsigned short ReadFromR16(enum r16Enum r) {
 bool ConditionCodeCheck(enum ccEnum cc) {
     switch(cc) {
         case Z:
-            if (GetFlag(ZERO)) return true;
+            if (GetFlag(ZERO) == 1) return true;
             break;
         case NZ:
-            if (!GetFlag(ZERO)) return true;
+            if (GetFlag(ZERO) == 0) return true;
             break;
         case CA:
-            if (GetFlag(CARRY)) return true;
+            if (GetFlag(CARRY) == 1) return true;
             break;
         case NC:
-            if (!GetFlag(CARRY)) return true;
+            if (GetFlag(CARRY) == 0) return true;
             break;
     }
     return false;
@@ -327,18 +328,19 @@ static void ADD_A(unsigned char value) {
     // Add register A and the input value
     int result = registers.a + value;
 
+    // Check if overflown from bit 3
+    if ((registers.a & 0xF) + (value & 0xF) > 0xF) SetFlag(HALF_CARRY, 1);
+    else SetFlag(HALF_CARRY, 0);
+
     // Make sure the value is shortened to 8 bits
     registers.a = (unsigned char)(result & 0xff);
 
     // Check if overflown from bit 7
     if (result & 0xFF00) SetFlag(CARRY, 1);
     else SetFlag(CARRY, 0);
-    // Check if overflown from bit 3
-    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) SetFlag(HALF_CARRY, 1);
-    else SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (result == 0) SetFlag(ZERO, 1);
-    else SetFlag(ZERO, 0);
+    if (registers.a) SetFlag(ZERO, 0);
+    else SetFlag(ZERO, 1);
     // Not a subtract so set to false
     SetFlag(SUBTRACT, 0);
 }
@@ -365,7 +367,7 @@ static void CP(unsigned char value) {
     if ((value & 0x0F) > (registers.a & 0x0F)) SetFlag(HALF_CARRY, 1);
     else SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (registers.a  == 0) SetFlag(ZERO, 1);
+    if (registers.a - value  == 0) SetFlag(ZERO, 1);
     else SetFlag(ZERO, 0);
     // Is a subtract so set to true
     SetFlag(SUBTRACT, 1);
@@ -384,8 +386,17 @@ static void DEC_r8(enum r8Enum target) {
     SetFlag(SUBTRACT, 1);
 }
 
+static void DEC_r16(enum r16Enum target) {
+    unsigned short value = ReadFromR16(target) - 1;
+    WriteToR16(target, value);
+}
+
 static void DI() {
     ime = 0;
+}
+
+static void EI() {
+    ime = 1;
 }
 
 static void INC_r8(enum r8Enum target) {
@@ -399,6 +410,11 @@ static void INC_r8(enum r8Enum target) {
     else SetFlag(ZERO, 0);
     // Not a subtract so set to false
     SetFlag(SUBTRACT, 0);
+}
+
+static void INC_r16(enum r16Enum target) {
+    unsigned short value = ReadFromR16(target) + 1;
+    WriteToR16(target, value);
 }
 
 static unsigned short JP(unsigned short value) {
@@ -469,6 +485,11 @@ static unsigned short RET() {
     return value;
 }
 
+static unsigned short RETI() {
+    EI();
+    return RET();
+}
+
 static void SBC_A(unsigned char value) {
     // Subtract carry flag and the input value from register A
     registers.a = registers.a - value - (unsigned char)GetFlag(CARRY);
@@ -487,14 +508,15 @@ static void SBC_A(unsigned char value) {
 }
 
 static void SUB(unsigned char value) {
+    // Check if overflown from bit 3
+    if ((value & 0x0F) > (registers.a & 0x0F)) SetFlag(HALF_CARRY, 1);
+    else SetFlag(HALF_CARRY, 0);
+
     registers.a = registers.a - value;
 
     // Check if overflown from bit 7
     if (value  > registers.a) SetFlag(CARRY, 1);
     else SetFlag(CARRY, 0);
-    // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) SetFlag(HALF_CARRY, 1);
-    else SetFlag(HALF_CARRY, 0);
     // Check if 0
     if (registers.a  == 0) SetFlag(ZERO, 1);
     else SetFlag(ZERO, 0);
@@ -651,7 +673,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return JR((signed char) memoryBus.memory[address + 1]);
                                 break;
                             case 4 ... 7:
-                                if (ConditionCodeCheck(Table_cc(y))) return JR((signed char) memoryBus.memory[address + 1]);
+                                if (ConditionCodeCheck(Table_cc(y-4))) return JR((signed char) memoryBus.memory[address + 1]);
                                 else return (address + 2);
                                 break;
                         }
@@ -724,10 +746,11 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 3:
                         switch (q) {
                             case 0:
-                                MissingInstruction("INC rp[p]");
+                                INC_r16(Table_rp(p));
                                 return (address + 1);
                                 break;
                             case 1:
+                                DEC_r16(Table_rp(p));
                                 MissingInstruction("DEC rp[p]");
                                 return (address + 1);
                                 break;
@@ -858,7 +881,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                         break;
 
                                     case 1:
-                                        MissingInstruction("RETI");
+                                        RETI();
                                         return (address + 1);
                                         break;
 
@@ -889,7 +912,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 break;
 
                             case 5:
-                                LD_n16_n8(memoryBus.memory[(nn)], registers.a);
+                                LD_n16_n8(nn, registers.a);
                                 return (address + 3);
                                 break;
 
@@ -918,7 +941,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 break;
 
                             case 7:
-                                MissingInstruction("EI");
+                                EI();
                                 return (address + 1);
                                 break;
                         }
@@ -955,7 +978,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     // Operate on accumulator and immediate operand
                     case 6:
                         Table_alu(y, memoryBus.memory[address + 1]);
-                        return (address + 1);
+                        return (address + 2);
                     break;
 
                     // Restart

@@ -1,12 +1,9 @@
-#include "SDL3/SDL_video.h"
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
-#include <SDL3/SDL.h>
+#include <SDL3/SDL_video.h>
 #include <SDL3/SDL_main.h>
-#include <SDL3/SDL_log.h>
 #include <input.h>
 #include <file.h>
 #include <cpu.h>
-#include <stdio.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
