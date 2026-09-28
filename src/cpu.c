@@ -14,9 +14,20 @@ struct registers registers;
 struct memoryBus memoryBus;
 unsigned char ime = 0;
 
+
+void WriteMemory(unsigned short address, unsigned short value) {
+    if (address == 0xFF80) SDL_Log("FF83");
+    memoryBus.memory[address] = value;
+}
+
+unsigned short ReadMemory(unsigned short address) {
+    if (address == 0xFF83) SDL_Log("FF83");
+    return memoryBus.memory[address];
+}
+
 // Function for missing instruction
 static void MissingInstruction(char *instruction) {
-    SDL_Log("Missing function %s, %02X, pc = %02X", instruction, memoryBus.memory[registers.pc], registers.pc);
+    SDL_Log("Missing function %s, %02X, pc = %02X", instruction, ReadMemory(registers.pc), registers.pc);
     SDL_Quit();
     exit(1);
 }
@@ -73,13 +84,12 @@ unsigned int GetFlag(enum flags flag) {
             bit = (registers.f & (CARRY_FLAG_BIT_POSITION)) >> 4;
             break;
     }
-    //SDL_Log("F: %02X Z: %u C: %i", registers.f, ((registers.f & (ZERO_FLAG_BIT_POSITION)) >> 7), ((registers.f & (CARRY_FLAG_BIT_POSITION)) >> 4));
     return bit;
 }
 
 void SetMemory(unsigned char* buffer, size_t size) {
     for (size_t i = 0; i < size - 1; i++) {
-        memoryBus.memory[i] = buffer[i];
+        WriteMemory(i, buffer[i]);
     }
     SDL_Log("ROM %.16s loaded into GB memory, buffer %p size %zu", (&memoryBus.memory[0]) + 0x134, &memoryBus.memory, size);
     CPU_Init();
@@ -92,6 +102,7 @@ void WriteToR8(enum r8Enum target, unsigned char value) {
             registers.a = value;
             break;
         case B:
+
             registers.b = value;
             break;
         case C:
@@ -110,7 +121,7 @@ void WriteToR8(enum r8Enum target, unsigned char value) {
             registers.l = value;
             break;
         case HL8:
-            memoryBus.memory[registers.hl] = value;
+            WriteMemory(registers.hl, value);
     }
 }
 
@@ -162,8 +173,8 @@ unsigned char ReadFromR8(enum r8Enum r) {
             value = registers.l;
             break;
         case HL8:
-            value = memoryBus.memory[registers.hl];
-            Tick(memoryBus, registers);
+            value = 0xFF;
+            SDL_Log("%02X, %04X, %02X, %02X", value, registers.hl, registers.h, registers.l);
     }
     return value;
 }
@@ -237,6 +248,8 @@ static enum r8Enum Table_r(unsigned int index) {
             target = L;
             break;
         case 6:
+            //SDL_Log("%02X, %04X, %02X", registers.hl, registers.h, registers.l);
+
             target = HL8;
             break;
         case 7:
@@ -399,6 +412,15 @@ static void EI() {
     ime = 1;
 }
 
+static void HALT() {
+    if (ime) {
+         SDL_Log("HALT here");
+    }
+    else {
+        return;
+    }
+}
+
 static void INC_r8(enum r8Enum target) {
     unsigned char value = ReadFromR8(target) + 1;
     WriteToR8(target, value);
@@ -427,7 +449,7 @@ static unsigned short JR(signed char value) {
 
 // Copy from byte at address n16 into A
 static void LD_A_n16(unsigned short value) {
-    WriteToR8(A, memoryBus.memory[value]);
+    WriteToR8(A, ReadMemory(value));
 }
 
 // Copy from n8 into r8
@@ -437,7 +459,7 @@ static void LD_r8_n8(enum r8Enum r8Target, unsigned char value) {
 
 // Copy from n8 into byte at address n16
 static void LD_n16_n8(unsigned short target, unsigned char value) {
-    memoryBus.memory[target] = value;
+    WriteMemory(target, value);
 }
 
 // Copy from value into r16
@@ -463,15 +485,15 @@ static void OR(unsigned char value) {
 }
 
 static void POP(enum r16Enum r) {
-    unsigned short value =  memoryBus.memory[registers.sp] |  (memoryBus.memory[registers.sp + 1] << 8);
+    unsigned short value =  ReadMemory(registers.sp) |  (ReadMemory(registers.sp + 1) << 8);
     registers.sp += 2;
     WriteToR16(r, value);
 }
 
 static void PUSH(unsigned short value) {
     registers.sp-=2;
-    memoryBus.memory[registers.sp + 1] = (unsigned char)((value & 0xFF00) >> 8);
-    memoryBus.memory[registers.sp] = (unsigned char)((value & 0x00FF));
+    WriteMemory(registers.sp + 1, (unsigned char)((value & 0xFF00) >> 8));
+    WriteMemory(registers.sp, (unsigned char)((value & 0x00FF)));
 }
 
 static unsigned short CALL(unsigned short value) {
@@ -480,7 +502,7 @@ static unsigned short CALL(unsigned short value) {
 }
 
 static unsigned short RET() {
-    unsigned short value =  memoryBus.memory[registers.sp] |  (memoryBus.memory[registers.sp + 1] << 8);
+    unsigned short value =  ReadMemory(registers.sp) |  (ReadMemory(registers.sp + 1) << 8);
     registers.sp += 2;
     return value;
 }
@@ -609,13 +631,13 @@ static void Table_rot(unsigned int index, enum r8Enum r) {
 // Executes an instruction and returns new pc address
 unsigned short CPU_ExecuteInstruction(unsigned short address) {
     // Prefix CB
-    if (memoryBus.memory[address] == (unsigned char)0xCB) {
+    if (ReadMemory(address) == (unsigned char)0xCB) {
 
         // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
         // Uses next byte as first byte is prefix
-        unsigned char x = memoryBus.memory[address + 1] >> 6;
-        unsigned char y = (memoryBus.memory[address + 1] >> 3) & 0x07;
-        unsigned char z = memoryBus.memory[address + 1] & 0x07;
+        unsigned char x = ReadMemory(address + 1) >> 6;
+        unsigned char y = (ReadMemory(address + 1) >> 3) & 0x07;
+        unsigned char z = ReadMemory(address + 1) & 0x07;
 
         switch (x) {
             // Roll/shift register or memory location
@@ -644,12 +666,12 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
     else {
 
         // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
-        unsigned char x = memoryBus.memory[address] >> 6;
-        unsigned char y = (memoryBus.memory[address] >> 3) & 0x07;
-        unsigned char z = memoryBus.memory[address] & 0x07;
+        unsigned char x = ReadMemory(address) >> 6;
+        unsigned char y = (ReadMemory(address) >> 3) & 0x07;
+        unsigned char z = ReadMemory(address) & 0x07;
         unsigned char p = y >> 1;
         unsigned char q = y % 2;
-        unsigned short nn = ((unsigned short)(memoryBus.memory[address + 1])) | (((unsigned short)memoryBus.memory[address + 2]) << 8);
+        unsigned short nn = ((unsigned short)(ReadMemory(address + 1))) | (((unsigned short)ReadMemory(address + 2)) << 8);
 
         switch (x) {
             case 0:
@@ -670,10 +692,10 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return (address + 1);
                                 break;
                             case 3:
-                                return JR((signed char) memoryBus.memory[address + 1]);
+                                return JR((signed char) ReadMemory(address + 1));
                                 break;
                             case 4 ... 7:
-                                if (ConditionCodeCheck(Table_cc(y-4))) return JR((signed char) memoryBus.memory[address + 1]);
+                                if (ConditionCodeCheck(Table_cc(y-4))) return JR((signed char) ReadMemory(address + 1));
                                 else return (address + 2);
                                 break;
                         }
@@ -720,20 +742,20 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        LD_r8_n8(A, memoryBus.memory[registers.bc]);
+                                        LD_r8_n8(A, ReadMemory(registers.bc));
                                         return (address + 1);
                                         break;
                                     case 1:
-                                        LD_r8_n8(A, memoryBus.memory[registers.de]);
+                                        LD_r8_n8(A, ReadMemory(registers.de));
                                         return (address + 1);
                                         break;
                                     case 2:
-                                        LD_r8_n8(A, memoryBus.memory[registers.hl]);
+                                        LD_r8_n8(A, ReadMemory(registers.hl));
                                         registers.hl++;
                                         return (address + 1);
                                         break;
                                     case 3:
-                                        LD_r8_n8(A, memoryBus.memory[registers.hl]);
+                                        LD_r8_n8(A, ReadMemory(registers.hl));
                                         registers.hl--;
                                         return (address + 1);
                                         break;
@@ -771,7 +793,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 
                     // 8-bit load immediate
                     case 6:
-                        LD_r8_n8(Table_r(y), memoryBus.memory[address + 1]);
+                        LD_r8_n8(Table_r(y), ReadMemory(address + 1));
                        return (address + 2);
                     break;
 
@@ -817,8 +839,8 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 
             case 1:
                 // Exception (replaces LD (HL), (HL))
-                if (z == 6) {
-                    MissingInstruction("HALT");
+                if (z == 6 && y == 6) {
+                    HALT();
                     return (address + 1);
                 }
                 // 8-bit loading
@@ -855,7 +877,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 break;
 
                             case 6:
-                                LD_r8_n8(A, memoryBus.memory[(0xFF00 + memoryBus.memory[address + 1])]);
+                                LD_r8_n8(A, ReadMemory((0xFF00 + ReadMemory(address + 1))));
                                 return (address + 2);
                                 break;
 
@@ -977,7 +999,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 
                     // Operate on accumulator and immediate operand
                     case 6:
-                        Table_alu(y, memoryBus.memory[address + 1]);
+                        Table_alu(y, ReadMemory(address + 1));
                         return (address + 2);
                     break;
 
@@ -997,6 +1019,7 @@ void CPU_Step() {
     //SDL_Log("%04X",registers.pc);
     //if (registers.pc > 0x100) MissingInstruction("break");
     Tick(memoryBus, registers);
+
     registers.pc = CPU_ExecuteInstruction(registers.pc);
 }
 
