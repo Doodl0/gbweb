@@ -1,8 +1,6 @@
-#include <stdbool.h>
+// Memory and registers
 
-// Registers
-// AF, BC, DE, and HL are grouped as they are often utilised together, as virtual 16 bit registers
-struct registers {
+typedef struct registers {
     struct {
         union {
             struct {
@@ -46,24 +44,30 @@ struct registers {
     unsigned short pc;
     unsigned short sp;
 
-} extern registers;
+} registersStruct;
 
-enum flags {
+extern registersStruct registers;
+
+// 8-bit registers
+typedef enum r8Enum {
+    A, B, C, D, E, H, L, HL8
+} r8Enum;
+// Register pairs
+typedef enum r16Enum {
+    BC, DE, HL, SP, AF, PC
+} r16Enum;
+// Conditions
+typedef enum ccEnum {
+    NZ, Z, NC, CA
+} ccEnum;
+
+typedef enum flags {
     ZERO,
     SUBTRACT,
     HALF_CARRY,
     CARRY
-};
+} flags;
 
-// 8-bit registers
-enum r8Enum {
-    A, B, C, D, E, H, L, HL8
-};
-// Register pairs
-enum r16Enum {
-    BC, DE, HL, SP, AF, PC
-};
-// Conditions
-enum ccEnum {
-    NZ, Z, NC, CA
-};
+void Registers_SetFlag(enum flags flag, unsigned int value);
+
+unsigned int Registers_GetFlag(enum flags flag);

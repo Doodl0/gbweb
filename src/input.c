@@ -27,7 +27,7 @@ void Input(SDL_Event *event) {
             SDL_Log("Right");
         }
         else if (event->key.scancode == OPEN_ROM) {
-            OpenFileDialog();
+            File_OpenDialog();
         }
     }
 }

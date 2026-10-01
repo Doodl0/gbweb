@@ -1,14 +1,14 @@
 #include <stdint.h>
 
-void OpenFileDialog();
+void File_OpenDialog();
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 
-EMSCRIPTEN_KEEPALIVE int LoadFile(char* filename, char *buffer, size_t size, void *callback_data);
+EMSCRIPTEN_KEEPALIVE int File_Load(char* filename, char *buffer, size_t size, void *callback_data);
 
 #else
 
-void LoadFile(char* filename);
+void File_Load(char* filename);
 
 #endif

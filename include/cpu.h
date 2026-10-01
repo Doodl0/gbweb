@@ -1,5 +1,6 @@
 #include <stdio.h>
+#include <cycles.h>
 
 void CPU_Step();
 void CPU_Init();
-void SetMemory(unsigned char* buffer, size_t size);
+void Memory_Set(unsigned char* buffer, size_t size);

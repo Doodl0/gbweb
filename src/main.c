@@ -22,7 +22,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         SDL_Log("Couldn't create window and renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    OpenFileDialog();
+    File_OpenDialog();
     CPU_Init();
 
     return SDL_APP_CONTINUE;

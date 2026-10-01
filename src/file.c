@@ -1,20 +1,18 @@
 #include <stddef.h>
-#include <stdint.h>
 #include <SDL3/SDL.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 
-#include <cpu.h>
-#include <stdio.h>
+#include <memory.h>
 
 // Based on stackoverflow.com/questions/69935188/open-a-file-in-emscripten-using-browser-file-selector-dialogue
 // and github.com/Armchair-Software/emscripten-browser-file
 
 #ifdef __EMSCRIPTEN__
 
-EMSCRIPTEN_KEEPALIVE int LoadFile(const uint8_t *buffer, size_t size) {
+EMSCRIPTEN_KEEPALIVE int File_Load(const uint8_t *buffer, size_t size) {
   /// Load a file - this function is called from javascript when the file upload is activated
   SDL_Log("ROM %.16s loaded, buffer %p size %zu", buffer + 0x134, &buffer, size);
 
@@ -26,7 +24,7 @@ EMSCRIPTEN_KEEPALIVE int LoadFile(const uint8_t *buffer, size_t size) {
 #else
 
 // TODO: Check file size
-void LoadFile(char* filename) {
+void File_Load(char* filename) {
     FILE* file = fopen(filename, "rb");
     unsigned char buffer[0x8000];
     unsigned char *ptr = buffer;
@@ -34,13 +32,13 @@ void LoadFile(char* filename) {
 
     SDL_Log("ROM %.16s loaded from file, buffer %p size %zu" , ptr + 0x134, &ptr, (unsigned long)0x8000);
 
-    SetMemory(ptr,0x8000);
+    Memory_Set(ptr,0x8000);
     fclose(file);
 }
 
 #endif
 
-void OpenFileDialog() {
+void File_OpenDialog() {
     #ifdef __EMSCRIPTEN__
     EM_ASM(
       var file_selector = document.createElement('input');
@@ -51,7 +49,7 @@ void OpenFileDialog() {
     );
     #else
 
-    LoadFile("rom.gb");
+    File_Load("rom.gb");
 
     #endif
 }
