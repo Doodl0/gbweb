@@ -12,7 +12,7 @@ static void CPU_MissingInstruction(char *instruction) {
 }
 
 // Modifiying registers based on enums
-void WriteToR8(enum r8Enum target, unsigned char value) {
+void WriteToR8(r8Enum target, unsigned char value) {
     switch (target) {
         case A:
             registers.a = value;
@@ -41,7 +41,7 @@ void WriteToR8(enum r8Enum target, unsigned char value) {
     }
 }
 
-void WriteToR16(enum r16Enum target, unsigned short value) {
+void WriteToR16(r16Enum target, unsigned short value) {
     switch (target) {
         case BC:
             registers.bc = value;
@@ -64,7 +64,7 @@ void WriteToR16(enum r16Enum target, unsigned short value) {
     }
 }
 
-unsigned char ReadFromR8(enum r8Enum r) {
+unsigned char ReadFromR8(r8Enum r) {
     unsigned char value;
     switch (r) {
         case A:
@@ -89,14 +89,12 @@ unsigned char ReadFromR8(enum r8Enum r) {
             value = registers.l;
             break;
         case HL8:
-            SDL_Log("%02X, %04X, %02X, %02X", value, registers.hl, registers.h, registers.l);
             value = Memory_Read(registers.hl);
-            SDL_Log("%02X, %04X, %02X, %02X", value, registers.hl, registers.h, registers.l);
     }
     return value;
 }
 
-unsigned short ReadFromR16(enum r16Enum r) {
+unsigned short ReadFromR16(r16Enum r) {
     unsigned short value;
     switch (r) {
         case BC:
@@ -122,7 +120,7 @@ unsigned short ReadFromR16(enum r16Enum r) {
 }
 
 // Flag checks
-bool ConditionCodeCheck(enum ccEnum cc) {
+bool ConditionCodeCheck(ccEnum cc) {
     switch(cc) {
         case Z:
             if (Registers_GetFlag(ZERO) == 1) return true;
@@ -143,8 +141,8 @@ bool ConditionCodeCheck(enum ccEnum cc) {
 // Value tables
 
 // 8-bit registers
-static enum r8Enum Table_r(unsigned int index) {
-    enum r8Enum target = A;
+static r8Enum Table_r(unsigned int index) {
+    r8Enum target = A;
     switch (index) {
         case 0:
             target = B;
@@ -165,8 +163,6 @@ static enum r8Enum Table_r(unsigned int index) {
             target = L;
             break;
         case 6:
-            //SDL_Log("%02X, %04X, %02X", registers.hl, registers.h, registers.l);
-
             target = HL8;
             break;
         case 7:
@@ -176,8 +172,8 @@ static enum r8Enum Table_r(unsigned int index) {
     return target;
 }
 // Register pairs featuring SP
-static enum r16Enum Table_rp(unsigned int index) {
-    enum r16Enum target = BC;
+static r16Enum Table_rp(unsigned int index) {
+    r16Enum target = BC;
     switch (index) {
         case 0:
             target = BC;
@@ -195,8 +191,8 @@ static enum r16Enum Table_rp(unsigned int index) {
         return target;
 }
 // Register pairs featuring AF
-static enum r16Enum Table_rp2(unsigned int index) {
-    enum r16Enum target = BC;
+static r16Enum Table_rp2(unsigned int index) {
+    r16Enum target = BC;
     switch (index) {
         case 0:
             target = BC;
@@ -214,8 +210,8 @@ static enum r16Enum Table_rp2(unsigned int index) {
         return target;
 }
 // Condition codes
-static enum ccEnum Table_cc(unsigned int index) {
-    enum ccEnum target = NZ;
+static ccEnum Table_cc(unsigned int index) {
+    ccEnum target = NZ;
     switch (index) {
         case 0:
             target = NZ;
@@ -291,7 +287,7 @@ static void CP(unsigned char value) {
     // Compare and set flags
 
     // Check if overflown from bit 7
-    if (value  > registers.a) Registers_SetFlag(CARRY, 1);
+    if (value > registers.a) Registers_SetFlag(CARRY, 1);
     else Registers_SetFlag(CARRY, 0);
     // Check if overflown from bit 3
     if ((value & 0x0F) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
@@ -303,7 +299,7 @@ static void CP(unsigned char value) {
     Registers_SetFlag(SUBTRACT, 1);
 }
 
-static void DEC_r8(enum r8Enum target) {
+static void DEC_r8(r8Enum target) {
     unsigned char value = ReadFromR8(target) - 1;
     WriteToR8(target, value);
     // Check if overflown from bit 3
@@ -316,7 +312,7 @@ static void DEC_r8(enum r8Enum target) {
     Registers_SetFlag(SUBTRACT, 1);
 }
 
-static void DEC_r16(enum r16Enum target) {
+static void DEC_r16(r16Enum target) {
     unsigned short value = ReadFromR16(target) - 1;
     WriteToR16(target, value);
 }
@@ -338,7 +334,7 @@ static void HALT() {
     }
 }
 
-static void INC_r8(enum r8Enum target) {
+static void INC_r8(r8Enum target) {
     unsigned char value = ReadFromR8(target) + 1;
     WriteToR8(target, value);
     // Check if overflown from bit 3
@@ -351,7 +347,7 @@ static void INC_r8(enum r8Enum target) {
     Registers_SetFlag(SUBTRACT, 0);
 }
 
-static void INC_r16(enum r16Enum target) {
+static void INC_r16(r16Enum target) {
     unsigned short value = ReadFromR16(target) + 1;
     WriteToR16(target, value);
 }
@@ -370,7 +366,7 @@ static void LD_A_n16(unsigned short value) {
 }
 
 // Copy from n8 into r8
-static void LD_r8_n8(enum r8Enum r8Target, unsigned char value) {
+static void LD_r8_n8(r8Enum r8Target, unsigned char value) {
     WriteToR8(r8Target, value);
 }
 
@@ -380,7 +376,7 @@ static void LD_n16_n8(unsigned short target, unsigned char value) {
 }
 
 // Copy from value into r16
-static void LD_r16_n16(enum r16Enum r16, unsigned short value) {
+static void LD_r16_n16(r16Enum r16, unsigned short value) {
     WriteToR16(r16, value);
 }
 
@@ -401,7 +397,7 @@ static void OR(unsigned char value) {
     Registers_SetFlag(SUBTRACT, 0);
 }
 
-static void POP(enum r16Enum r) {
+static void POP(r16Enum r) {
     unsigned short value =  Memory_Read(registers.sp) |  (Memory_Read(registers.sp + 1) << 8);
     registers.sp += 2;
     WriteToR16(r, value);
@@ -463,6 +459,36 @@ static void SUB(unsigned char value) {
     Registers_SetFlag(SUBTRACT, 1);
 }
 
+static unsigned char SRL(unsigned char value) {
+    if(value & 0x01) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    value >>= 1;
+
+    if(value == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return value;
+}
+
+static unsigned char RR(unsigned char value) {
+    unsigned char newValue = (value >> 1) | (Registers_GetFlag(CARRY) << 7);
+
+    if((value & 0x01)) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    if(newValue == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return newValue;
+}
+
 static void XOR(unsigned char value) {
     // Bitwise XOR of A and value
     registers.a = registers.a ^ value;
@@ -510,11 +536,11 @@ static void Table_alu(unsigned int index, unsigned char value) {
     }
 }
 // alu table but accepts a register input, then passes value to main alu function
-static void Table_alu_register(unsigned int index, enum r8Enum r) {
+static void Table_alu_register(unsigned int index, r8Enum r) {
     Table_alu(index, ReadFromR8(r));
 }
 // Rotation/shift operations
-static void Table_rot(unsigned int index, enum r8Enum r) {
+static void Table_rot(unsigned int index, r8Enum r) {
     unsigned char value = ReadFromR8(r);
 
     switch (index) {
@@ -528,7 +554,7 @@ static void Table_rot(unsigned int index, enum r8Enum r) {
             CPU_MissingInstruction("RL(value)");
             break;
         case 3:
-            CPU_MissingInstruction("RR(value)");
+            value = RR(value);
             break;
         case 4:
             CPU_MissingInstruction("SLA(value)");
@@ -540,9 +566,10 @@ static void Table_rot(unsigned int index, enum r8Enum r) {
             CPU_MissingInstruction("SWAP(value)");
             break;
         case 7:
-            CPU_MissingInstruction("SRL(value)");
+            value = SRL(value);
             break;
     }
+    WriteToR8(r, value);
 }
 
 // Executes an instruction and returns new pc address
@@ -731,7 +758,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return (address + 1);
                                 break;
                             case 3:
-                                CPU_MissingInstruction("RRA");
+                                registers.a = RR(registers.a);
                                 return (address + 1);
                                 break;
                             case 4:
@@ -934,8 +961,6 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 }
 
 void CPU_Step() {
-    //SDL_Log("%04X",registers.pc);
-    //if (registers.pc > 0x100) MissingInstruction("break");
     Tick();
     Memory_Log(memory, registers);
 
