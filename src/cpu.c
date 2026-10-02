@@ -232,14 +232,14 @@ static ccEnum Table_cc(unsigned int index) {
 // Instructions
 static void ADC_A(unsigned char value) {
     // Check if overflown from bit 3
-    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) Registers_SetFlag(HALF_CARRY, 1);
+    if ((registers.a & 0x0F) + (value & 0x0F) + Registers_GetFlag(CARRY) > 0x0F) Registers_SetFlag(HALF_CARRY, 1);
     else Registers_SetFlag(HALF_CARRY, 0);
 
     // Add carry flag, register A and the input value
     int result = registers.a + (value + (unsigned char)Registers_GetFlag(CARRY));
 
     // Make sure the value is shortened to 8 bits
-    registers.a = (unsigned char)(result & 0xff);
+    registers.a = (unsigned char)(result & 0xFF);
 
     // Check if overflown from bit 7
     if (result & 0xFF00) Registers_SetFlag(CARRY, 1);
@@ -247,6 +247,25 @@ static void ADC_A(unsigned char value) {
     // Check if 0
     if (registers.a == 0) Registers_SetFlag(ZERO, 1);
     else Registers_SetFlag(ZERO, 0);
+    // Not a subtract so set to false
+    Registers_SetFlag(SUBTRACT, 0);
+}
+
+static void ADD_HL(unsigned short value) {
+    // Add register A and the input value
+    int result = registers.hl + value;
+
+    // Check if overflown from bit 11
+    if ((registers.hl & 0xFFF) + (value & 0xFFF) > 0xFFF) Registers_SetFlag(HALF_CARRY, 1);
+    else Registers_SetFlag(HALF_CARRY, 0);
+
+    // Make sure the value is shortened to 8 bits
+    registers.hl = (unsigned short)(result & 0xFFFF);
+
+    // Check if overflown from bit 15
+    if (result & 0xFFFF0000) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
     // Not a subtract so set to false
     Registers_SetFlag(SUBTRACT, 0);
 }
@@ -260,7 +279,7 @@ static void ADD_A(unsigned char value) {
     else Registers_SetFlag(HALF_CARRY, 0);
 
     // Make sure the value is shortened to 8 bits
-    registers.a = (unsigned char)(result & 0xff);
+    registers.a = (unsigned char)(result & 0xFF);
 
     // Check if overflown from bit 7
     if (result & 0xFF00) Registers_SetFlag(CARRY, 1);
@@ -491,6 +510,11 @@ static unsigned char RR(unsigned char value) {
     return newValue;
 }
 
+static void RRA() {
+    registers.a = RR(registers.a);
+    Registers_SetFlag(ZERO, 0);
+}
+
 static void XOR(unsigned char value) {
     // Bitwise XOR of A and value
     registers.a = registers.a ^ value;
@@ -656,7 +680,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return (address + 3);
                                 break;
                             case 1:
-                                CPU_MissingInstruction("ADD HL, rp[p]");
+                                ADD_HL(ReadFromR16(Table_rp(p)));
                                 return (address + 1);
                                 break;
                         }
@@ -760,7 +784,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return (address + 1);
                                 break;
                             case 3:
-                                registers.a = RR(registers.a);
+                                RRA();
                                 return (address + 1);
                                 break;
                             case 4:
@@ -964,8 +988,9 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 
 void CPU_Step() {
     Tick();
+    #ifndef NDEBUG
     Memory_Log(memory, registers);
-
+    #endif
     registers.pc = CPU_ExecuteInstruction(registers.pc);
 }
 
