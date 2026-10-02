@@ -7,8 +7,6 @@
 // Function for missing instruction
 static void CPU_MissingInstruction(char *instruction) {
     SDL_Log("Missing function %s, %02X, pc = %02X", instruction, Memory_Read(registers.pc), registers.pc);
-    SDL_Quit();
-    exit(1);
 }
 
 // Modifiying registers based on enums
@@ -1007,4 +1005,14 @@ void CPU_Init() {
     registers.pc = 0x0100;
 
     memory.memory[0xFF44] = 0x90;
+
+    #ifndef NDEBUG
+    Memory_LogInit();
+    #endif
+}
+
+void CPU_Quit() {
+    Memory_LogDeinit();
+    SDL_Quit();
+    exit(1);
 }

@@ -15,4 +15,8 @@ unsigned short Memory_Read(unsigned short address);
 
 void Memory_Set(unsigned char* buffer, size_t size);
 
+void Memory_LogInit();
+
 void Memory_Log(memoryBus memory, registersStruct registers);
+
+void Memory_LogDeinit();
