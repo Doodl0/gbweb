@@ -231,6 +231,10 @@ static ccEnum Table_cc(unsigned int index) {
 
 // Instructions
 static void ADC_A(unsigned char value) {
+    // Check if overflown from bit 3
+    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) Registers_SetFlag(HALF_CARRY, 1);
+    else Registers_SetFlag(HALF_CARRY, 0);
+
     // Add carry flag, register A and the input value
     int result = registers.a + (value + (unsigned char)Registers_GetFlag(CARRY));
 
@@ -240,11 +244,8 @@ static void ADC_A(unsigned char value) {
     // Check if overflown from bit 7
     if (result & 0xFF00) Registers_SetFlag(CARRY, 1);
     else Registers_SetFlag(CARRY, 0);
-    // Check if overflown from bit 3
-    if ((registers.a & 0x0F) + (value & 0x0F) > 0x0F) Registers_SetFlag(HALF_CARRY, 1);
-    else Registers_SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (result == 0) Registers_SetFlag(ZERO, 1);
+    if (registers.a == 0) Registers_SetFlag(ZERO, 1);
     else Registers_SetFlag(ZERO, 0);
     // Not a subtract so set to false
     Registers_SetFlag(SUBTRACT, 0);
@@ -443,15 +444,16 @@ static void SBC_A(unsigned char value) {
 }
 
 static void SUB(unsigned char value) {
+    // Check if overflown from bit 7
+    if (value > registers.a) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
     // Check if overflown from bit 3
     if ((value & 0x0F) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
     else Registers_SetFlag(HALF_CARRY, 0);
 
     registers.a = registers.a - value;
 
-    // Check if overflown from bit 7
-    if (value  > registers.a) Registers_SetFlag(CARRY, 1);
-    else Registers_SetFlag(CARRY, 0);
     // Check if 0
     if (registers.a  == 0) Registers_SetFlag(ZERO, 1);
     else Registers_SetFlag(ZERO, 0);
