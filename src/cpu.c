@@ -4,9 +4,16 @@
 #include <memory.h>
 #include <cycles.h>
 
+void CPU_Quit() {
+    Memory_LogDeinit();
+    SDL_Quit();
+    exit(1);
+}
+
 // Function for missing instruction
 static void CPU_MissingInstruction(char *instruction) {
     SDL_Log("Missing function %s, %02X, pc = %02X", instruction, Memory_Read(registers.pc), registers.pc);
+    CPU_Quit();
 }
 
 // Modifiying registers based on enums
@@ -398,6 +405,12 @@ static void LD_r16_n16(r16Enum r16, unsigned short value) {
     WriteToR16(r16, value);
 }
 
+// Copy from SP to memory
+static void LD_n16_n16(unsigned short address, unsigned short value) {
+    Memory_Write(address, (unsigned char)(registers.sp & 0xFF));
+    Memory_Write(address + 1, (unsigned char)(registers.sp >> 8));
+}
+
 static void NOP() {}
 
 static void OR(unsigned char value) {
@@ -653,7 +666,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return (address + 1);
                                 break;
                             case 1:
-                                CPU_MissingInstruction("LD (nn), SP");
+                                LD_n16_n16(nn, registers.sp);
                                 return (address + 3);
                                 break;
                             case 2:
@@ -846,7 +859,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 break;
 
                             case 6:
-                                LD_r8_n8(A, Memory_Read((0xFF00 + n)));
+                                LD_A_n16(0xFF00 + n);
                                 return (address + 2);
                                 break;
 
@@ -1009,10 +1022,4 @@ void CPU_Init() {
     #ifndef NDEBUG
     Memory_LogInit();
     #endif
-}
-
-void CPU_Quit() {
-    Memory_LogDeinit();
-    SDL_Quit();
-    exit(1);
 }
