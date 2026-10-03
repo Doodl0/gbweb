@@ -885,8 +885,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                         break;
 
                                     case 1:
-                                        RETI();
-                                        return (address + 1);
+                                        return RETI();
                                         break;
 
                                     case 2:
@@ -894,7 +893,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                         break;
 
                                     case 3:
-                                        CPU_MissingInstruction("LD SP, HL");
+                                        registers.sp = registers.hl; // LD SP HL
                                         return (address + 1);
                                         break;
                                 }
