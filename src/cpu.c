@@ -613,8 +613,10 @@ static void Table_rot(unsigned int index, r8Enum r) {
 
 // Executes an instruction and returns new pc address
 unsigned short CPU_ExecuteInstruction(unsigned short address) {
+    unsigned char instr = Memory_Read(address);
+
     // Prefix CB
-    if (Memory_Read(address) == (unsigned char)0xCB) {
+    if (instr == (unsigned char)0xCB) {
 
         // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
         // Uses next byte as first byte is prefix
@@ -657,13 +659,13 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
     else {
 
         // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
-        unsigned char x = Memory_Read(address) >> 6;
-        unsigned char y = (Memory_Read(address) >> 3) & 0x07;
-        unsigned char z = Memory_Read(address) & 0x07;
+        unsigned char x = instr >> 6;
+        unsigned char y = (instr >> 3) & 0x07;
+        unsigned char z = instr & 0x07;
         unsigned char p = y >> 1;
         unsigned char q = y % 2;
         unsigned char n = Memory_Read(address + 1);
-        unsigned short nn = ((unsigned short)(Memory_Read(address + 1))) | (((unsigned short)Memory_Read(address + 2)) << 8);
+        unsigned short nn = ((unsigned short)(n)) | (((unsigned short)Memory_Read(address + 2)) << 8);
 
         switch (x) {
             case 0:
@@ -1064,7 +1066,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 
                     // Operate on accumulator and immediate operand
                     case 6:
-                        Table_alu(y, Memory_Read(address + 1));
+                        Table_alu(y, n);
                         Cycle_Add(2);
                         return (address + 2);
                     break;
@@ -1085,7 +1087,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 void CPU_Step() {
     Cycle_Start();
     #ifndef NDEBUG
-    Memory_Log(memory, registers);
+    //Memory_Log(memory, registers);
     #endif
     registers.pc = CPU_ExecuteInstruction(registers.pc);
     Cycle_Wait();

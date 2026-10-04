@@ -4,6 +4,7 @@
 #include <input.h>
 #include <file.h>
 #include <cpu.h>
+#include <ppu.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -42,7 +43,25 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
     CPU_Step();
+    if (Render()) {
+        char* message = "No ROM loaded";
+        int w = 0, h = 0;
+        float x, y;
+        const float scale = 4.0f;
 
+        /* Center the message and scale it up */
+        SDL_GetCurrentRenderOutputSize(renderer, &w, &h);
+        SDL_SetRenderScale(renderer, scale, scale);
+        x = ((w / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE * SDL_strlen(message)) / 2;
+        y = ((h / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) / 2;
+
+        /* Draw the message */
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderClear(renderer);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderDebugText(renderer, x, y, message);
+        SDL_RenderPresent(renderer);
+    }
     return SDL_APP_CONTINUE;
 }
 

@@ -18,6 +18,7 @@ set(SOURCE_FILES
   src/cpu.c
   src/memory.c
   src/cycles.c
+  src/ppu.c
 )
 
 include_directories(include)
