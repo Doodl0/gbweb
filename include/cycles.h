@@ -1,4 +1,5 @@
 void Tick();
-void Cycle(int amount);
-unsigned int CyclesGet();
-void CyclesReset();
+void Cycle_Add(int amount);
+void Cycle_Wait();
+unsigned int Cycle_Get();
+void Cycle_Start();
