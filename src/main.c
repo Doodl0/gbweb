@@ -23,6 +23,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_APP_FAILURE;
     }
     File_OpenDialog();
+    CPU_ListInstructions();
     CPU_Init();
 
     return SDL_APP_CONTINUE;

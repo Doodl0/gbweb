@@ -456,6 +456,8 @@ static unsigned short RETI() {
     return RET();
 }
 
+static unsigned short RST() {}
+
 static void SBC_A(unsigned char value) {
     // Subtract carry flag and the input value from register A
     registers.a = registers.a - value - (unsigned char)Registers_GetFlag(CARRY);
@@ -624,21 +626,29 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
             // Roll/shift register or memory location
             case 0:
                 Table_rot(y, Table_r(z));
+                if (Table_r(z) == HL8) Cycle(4);
+                else Cycle(2);
                 break;
 
             // Test bit
             case 1:
                 CPU_MissingInstruction("BIT y, r[z]");
+                if (Table_r(z) == HL8) Cycle(3);
+                else Cycle(2);
                 break;
 
             // Reset bit
             case 2:
                 CPU_MissingInstruction("RES y, r[z]");
+                if (Table_r(z) == HL8) Cycle(4);
+                else Cycle(2);
                 break;
 
             // Set bit
             case 3:
                 CPU_MissingInstruction("SET y, r[z]");
+                if (Table_r(z) == HL8) Cycle(4);
+                else Cycle(2);
                 break;
         }
         return (address + 2);
@@ -663,10 +673,12 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                         switch (y) {
                             case 0:
                                 NOP();
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                             case 1:
                                 LD_n16_n16(nn, registers.sp);
+                                Cycle(5);
                                 return (address + 3);
                                 break;
                             case 2:
@@ -675,10 +687,17 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 break;
                             case 3:
                                 return JR((signed char) n);
+                                Cycle(3);
                                 break;
                             case 4 ... 7:
-                                if (ConditionCodeCheck(Table_cc(y-4))) return JR((signed char) n);
-                                else return (address + 2);
+                                if (ConditionCodeCheck(Table_cc(y-4))) {
+                                    Cycle(3);
+                                    return JR((signed char) n);
+                                }
+                                else {
+                                    Cycle(2);
+                                    return (address + 2);
+                                }
                                 break;
                         }
                     break;
@@ -688,10 +707,12 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                         switch (q) {
                             case 0:
                                 LD_r16_n16(Table_rp(p), nn);
+                                Cycle(3);
                                 return (address + 3);
                                 break;
                             case 1:
                                 ADD_HL(ReadFromR16(Table_rp(p)));
+                                Cycle(2);
                                 return (address + 1);
                                 break;
                         }
@@ -704,20 +725,24 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 switch (p) {
                                     case 0:
                                         LD_n16_n8(registers.bc, registers.a);
+                                        Cycle(2);
                                         return (address + 1);
                                         break;
                                     case 1:
                                         LD_n16_n8(registers.de, registers.a);
+                                        Cycle(2);
                                         return (address + 1);
                                         break;
                                     case 2:
                                         LD_n16_n8(registers.hl, registers.a);
                                         registers.hl++;
+                                        Cycle(2);
                                         return (address + 1);
                                         break;
                                     case 3:
                                         LD_n16_n8(registers.hl, registers.a);
                                         registers.hl--;
+                                        Cycle(2);
                                         return (address + 1);
                                         break;
                                 }
@@ -725,20 +750,24 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 switch (p) {
                                     case 0:
                                         LD_r8_n8(A, Memory_Read(registers.bc));
+                                        Cycle(2);
                                         return (address + 1);
                                         break;
                                     case 1:
                                         LD_r8_n8(A, Memory_Read(registers.de));
+                                        Cycle(2);
                                         return (address + 1);
                                         break;
                                     case 2:
                                         LD_r8_n8(A, Memory_Read(registers.hl));
                                         registers.hl++;
+                                        Cycle(2);
                                         return (address + 1);
                                         break;
                                     case 3:
                                         LD_r8_n8(A, Memory_Read(registers.hl));
                                         registers.hl--;
+                                        Cycle(2);
                                         return (address + 1);
                                         break;
                                 }
@@ -751,11 +780,12 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                         switch (q) {
                             case 0:
                                 INC_r16(Table_rp(p));
+                                Cycle(2);
                                 return (address + 1);
                                 break;
                             case 1:
                                 DEC_r16(Table_rp(p));
-                                CPU_MissingInstruction("DEC rp[p]");
+                                Cycle(2);
                                 return (address + 1);
                                 break;
                         }
@@ -764,19 +794,22 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     // 8-bit INC
                     case 4:
                         INC_r8(Table_r(y));
-                       return (address + 1);
+                        Cycle(1);
+                        return (address + 1);
                     break;
 
                     // 8-bit DEC
                     case 5:
                         DEC_r8(Table_r(y));
-                       return (address + 1);
+                        Cycle(1);
+                        return (address + 1);
                     break;
 
                     // 8-bit load immediate
                     case 6:
                         LD_r8_n8(Table_r(y), n);
-                       return (address + 2);
+                        Cycle(2);
+                        return (address + 2);
                     break;
 
                     // Assorted operations on accumulator/flags
@@ -784,34 +817,42 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                         switch (y) {
                             case 0:
                                 CPU_MissingInstruction("RLCA");
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                             case 1:
                                 CPU_MissingInstruction("RRCA");
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                             case 2:
                                 CPU_MissingInstruction("RLA");
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                             case 3:
                                 RRA();
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                             case 4:
                                 CPU_MissingInstruction("DAA");
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                             case 5:
                                 CPU_MissingInstruction("CPL");
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                             case 6:
                                 CPU_MissingInstruction("SCF");
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                             case 7:
                                 CPU_MissingInstruction("CCF");
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                         }
@@ -828,6 +869,10 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                 // 8-bit loading
                 else {
                     LD_r8_n8(Table_r(y), ReadFromR8(Table_r(z)));
+
+                    if ((Table_r(y) == HL8) || (Table_r(z) == HL8)) Cycle(2);
+                    else Cycle(1);
+
                     return (address + 1);
                 }
             break;
@@ -835,6 +880,10 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
             case 2:
                 // Operate on accumulator and register/memory location
                 Table_alu_register(y, Table_r(z));
+
+                if (Table_r(z) == HL8) Cycle(2);
+                else Cycle(1);
+
                 return (address + 1);
             break;
 
@@ -844,27 +893,37 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 0:
                         switch (y) {
                             case 0 ... 3:
-                                if (ConditionCodeCheck(Table_cc(y))) return RET();
-                                else return (address + 1);
+                                if (ConditionCodeCheck(Table_cc(y))) {
+                                    Cycle(5);
+                                    return RET();
+                                }
+                                else {
+                                    Cycle(2);
+                                    return (address + 1);
+                                }
                                 break;
 
                             case 4:
                                 LD_n16_n8((0xFF00 + n), registers.a);
+                                Cycle(3);
                                 return (address + 2);
                                 break;
 
                             case 5:
                                 CPU_MissingInstruction("ADD SP, d");
+                                Cycle(4);
                                 return (address + 2);
                                 break;
 
                             case 6:
                                 LD_A_n16(0xFF00 + n);
+                                Cycle(3);
                                 return (address + 2);
                                 break;
 
                             case 7:
                                 CPU_MissingInstruction("LD HL, SP+ d");
+                                Cycle(3);
                                 return (address + 2);
                                 break;
                         }
@@ -875,24 +934,29 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                         switch (q) {
                             case 0:
                                 POP(Table_rp2(p));
+                                Cycle(3);
                                 return (address + 1);
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
+                                        Cycle(4);
                                         return RET();
                                         break;
 
                                     case 1:
+                                        Cycle(4);
                                         return RETI();
                                         break;
 
                                     case 2:
+                                        Cycle(1);
                                         return JP(registers.hl);
                                         break;
 
                                     case 3:
+                                        Cycle(2);
                                         registers.sp = registers.hl; // LD SP HL
                                         return (address + 1);
                                         break;
@@ -905,17 +969,25 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 2:
                         switch (y) {
                             case 0 ... 3:
-                                if (ConditionCodeCheck(Table_cc(y))) return JP(nn);
-                                else return (address + 3);
+                                if (ConditionCodeCheck(Table_cc(y))) {
+                                    Cycle(4);
+                                    return JP(nn);
+                                }
+                                else {
+                                    Cycle(3);
+                                    return (address + 3);
+                                }
                                 break;
 
                             case 4:
                                 LD_n16_n8((0xFF00 + registers.c), registers.a);
+                                Cycle(2);
                                 return (address + 1);
                                 break;
 
                             case 5:
                                 LD_n16_n8(nn, registers.a);
+                                Cycle(4);
                                 return (address + 3);
                                 break;
 
@@ -926,6 +998,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 
                             case 7:
                                 LD_A_n16(nn);
+                                Cycle(2);
                                 return (address + 3);
                                 break;
                         }
@@ -935,16 +1008,19 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 3:
                         switch (y) {
                             case 0:
+                                Cycle(4);
                                 return JP(nn);
                                 break;
 
                             case 6:
                                 DI();
+                                Cycle(1);
                                 return (address + 1);
                                 break;
 
                             case 7:
                                 EI();
+                                Cycle(1);
                                 return (address + 1);
                                 break;
                         }
@@ -954,8 +1030,14 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     case 4:
                         switch (y) {
                             case 0 ... 3:
-                                if (ConditionCodeCheck(Table_cc(y))) return CALL(nn);
-                                else return (address + 3);
+                                if (ConditionCodeCheck(Table_cc(y))) {
+                                    Cycle(6);
+                                    return CALL(nn);
+                                }
+                                else {
+                                    Cycle(3);
+                                    return (address + 3);
+                                }
                                 break;
                         }
                     break;
@@ -965,12 +1047,14 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                         switch (q) {
                             case 0:
                                 PUSH(ReadFromR16(Table_rp2(p)));
+                                Cycle(4);
                                 return (address + 1);
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
+                                        Cycle(6);
                                         return CALL(nn);
                                         break;
                                 }
@@ -981,12 +1065,14 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                     // Operate on accumulator and immediate operand
                     case 6:
                         Table_alu(y, Memory_Read(address + 1));
+                        Cycle(2);
                         return (address + 2);
                     break;
 
                     // Restart
                     case 7:
                         CPU_MissingInstruction("RST y*8");
+                        Cycle(4);
                         return (address + 1);
                     break;
                 }
@@ -1021,4 +1107,14 @@ void CPU_Init() {
     #ifndef NDEBUG
     Memory_LogInit();
     #endif
+}
+
+void CPU_ListInstructions() {
+    for (unsigned char instr = 0; instr < 0xFF; instr ++) {
+        CyclesReset();
+        memory.memory[0] = instr;
+        registers.pc = 0;
+        registers.pc = CPU_ExecuteInstruction(registers.pc);
+        SDL_Log("Instr %02X, Cycles %u, Bytes %i", instr, CyclesGet(), registers.pc);
+    }
 }
