@@ -1,3 +1,4 @@
+#include "SDL3/SDL_log.h"
 #include <SDL3/SDL_stdinc.h>
 #include <cycles.h>
 #include <SDL3/SDL_timer.h>
@@ -23,7 +24,6 @@ void Cycle_Wait() {
 
     // Prevent integer underflow and 5 century wait time
     if (timeElapsed > cycleTime) return;
-
     // Subtract the remaining time from the already elapsed time and delay
     SDL_DelayNS(cycleTime - timeElapsed);
 }

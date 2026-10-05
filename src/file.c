@@ -12,19 +12,19 @@
 
 #ifdef __EMSCRIPTEN__
 
-EMSCRIPTEN_KEEPALIVE int File_Load(const uint8_t *buffer, size_t size) {
+EMSCRIPTEN_KEEPALIVE int LoadFile(const uint8_t *buffer, size_t size) {
   /// Load a file - this function is called from javascript when the file upload is activated
   SDL_Log("ROM %.16s loaded, buffer %p size %zu", buffer + 0x134, &buffer, size);
 
   // do whatever you need with the file contents
-  SetMemory((unsigned char *) buffer, size);
+  Memory_Set((unsigned char *) buffer, size);
   return 0;
 }
 
 #else
 
 // TODO: Check file size
-void File_Load(char* filename) {
+void LoadFile(char* filename) {
     FILE* file = fopen(filename, "rb");
     unsigned char buffer[0x8000];
     unsigned char *ptr = buffer;
@@ -49,7 +49,7 @@ void File_OpenDialog() {
     );
     #else
 
-    File_Load("rom.gb");
+    LoadFile("rom.gb");
 
     #endif
 }

@@ -1087,7 +1087,7 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
 void CPU_Step() {
     Cycle_Start();
     #ifndef NDEBUG
-    //Memory_Log(memory, registers);
+    Memory_Log(memory, registers);
     #endif
     registers.pc = CPU_ExecuteInstruction(registers.pc);
     Cycle_Wait();
