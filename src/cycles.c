@@ -10,9 +10,9 @@ Uint64 cycleStart = 0;
 // GB should run at 4.194304 MHz
 const Uint64 CYCLE_TIME_NS = ((1 / (4.194304 * 1000000)) * 1000000000);
 
-// Add the amount of cycles an instruction takes
+// Add the amount of cycles an instruction takes (Multiply by 4 to get T cycles rather than m cycles)
 void Cycle_Add(int amount) {
-    unwaitedCycles += amount;
+    unwaitedCycles += amount * 4;
 }
 
 // Wait for the amount of time depending on instructions
@@ -21,7 +21,6 @@ void Cycle_Wait() {
     Uint64 timeElapsed = SDL_GetTicksNS() - cycleStart;
     // Amount of time the instruction should take
     Uint64 cycleTime = (unwaitedCycles * CYCLE_TIME_NS);
-
     // Prevent integer underflow and 5 century wait time
     if (timeElapsed > cycleTime) return;
     // Subtract the remaining time from the already elapsed time and delay
