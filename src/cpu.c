@@ -23,7 +23,6 @@ void WriteToR8(r8Enum target, unsigned char value) {
             registers.a = value;
             break;
         case B:
-
             registers.b = value;
             break;
         case C:
@@ -70,58 +69,57 @@ void WriteToR16(r16Enum target, unsigned short value) {
 }
 
 unsigned char ReadFromR8(r8Enum r) {
-    unsigned char value;
     switch (r) {
         case A:
-            value = registers.a;
+            return registers.a;
             break;
         case B:
-            value = registers.b;
+            return registers.b;
             break;
         case C:
-            value = registers.c;
+            return registers.c;
             break;
         case D:
-            value = registers.d;
+            return registers.d;
             break;
         case E:
-            value = registers.e;
+            return registers.e;
             break;
         case H:
-            value = registers.h;
+            return registers.h;
             break;
         case L:
-            value = registers.l;
+            return registers.l;
             break;
         case HL8:
-            value = Memory_Read(registers.hl);
+            return Memory_Read(registers.hl);
     }
-    return value;
+    return 0;
 }
 
 unsigned short ReadFromR16(r16Enum r) {
     unsigned short value;
     switch (r) {
         case BC:
-            value = registers.bc;
+            return registers.bc;
             break;
         case DE:
-            value = registers.de;
+            return registers.de;
             break;
         case HL:
-            value = registers.hl;
+            return registers.hl;
             break;
         case SP:
-            value = registers.sp;
+            return registers.sp;
             break;
         case AF:
-            value = registers.af;
+            return registers.af;
             break;
         case PC:
-            value = registers.pc;
+            return registers.pc;
             break;
     }
-    return value;
+    return 0;
 }
 
 // Flag checks
@@ -147,101 +145,99 @@ bool ConditionCodeCheck(ccEnum cc) {
 
 // 8-bit registers
 static r8Enum Table_r(unsigned int index) {
-    r8Enum target = A;
     switch (index) {
         case 0:
-            target = B;
+            return B;
             break;
         case 1:
-            target = C;
+            return C;
             break;
         case 2:
-            target = D;
+            return D;
             break;
         case 3:
-            target = E;
+            return E;
             break;
         case 4:
-            target = H;
+            return H;
             break;
         case 5:
-            target = L;
+            return L;
             break;
         case 6:
-            target = HL8;
+            return HL8;
             break;
         case 7:
-            target = A;
+            return A;
             break;
     }
-    return target;
+    return B;
 }
 // Register pairs featuring SP
 static r16Enum Table_rp(unsigned int index) {
-    r16Enum target = BC;
     switch (index) {
         case 0:
-            target = BC;
+            return BC;
             break;
         case 1:
-            target = DE;
+            return DE;
             break;
         case 2:
-            target = HL;
+            return HL;
             break;
         case 3:
-            target = SP;
+            return SP;
             break;
         }
-        return target;
+        return BC;
 }
 // Register pairs featuring AF
 static r16Enum Table_rp2(unsigned int index) {
-    r16Enum target = BC;
     switch (index) {
         case 0:
-            target = BC;
+            return BC;
             break;
         case 1:
-            target = DE;
+            return DE;
             break;
         case 2:
-            target = HL;
+            return HL;
             break;
         case 3:
-            target = AF;
+            return AF;
             break;
         }
-        return target;
+        return BC;
 }
 // Condition codes
 static ccEnum Table_cc(unsigned int index) {
-    ccEnum target = NZ;
     switch (index) {
         case 0:
-            target = NZ;
+            return NZ;
             break;
         case 1:
-            target = Z;
+            return Z;
             break;
         case 2:
-            target = NC;
+            return NC;
             break;
         case 3:
-            target = CA;
+            return CA;
             break;
         }
-        return target;
+        return NZ;
 }
 
 // Instructions
 static void ADC_A(unsigned char value) {
+    unsigned char carry = Registers_GetFlag(CARRY);
+
     // Check if overflown from bit 3
-    if ((registers.a & 0x0F) + (value & 0x0F) + Registers_GetFlag(CARRY) > 0x0F) Registers_SetFlag(HALF_CARRY, 1);
+    if ((registers.a & 0x0F) + (value & 0x0F) + carry > 0x0F) Registers_SetFlag(HALF_CARRY, 1);
     else Registers_SetFlag(HALF_CARRY, 0);
 
     // Add carry flag, register A and the input value
-    int result = registers.a + (value + (unsigned char)Registers_GetFlag(CARRY));
+    int result = registers.a + (value + carry);
 
     // Make sure the value is shortened to 8 bits
     registers.a = (unsigned char)(result & 0xFF);
@@ -318,7 +314,7 @@ static void CP(unsigned char value) {
     if ((value & 0x0F) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
     else Registers_SetFlag(HALF_CARRY, 0);
     // Check if 0
-    if (registers.a - value  == 0) Registers_SetFlag(ZERO, 1);
+    if (registers.a - value == 0) Registers_SetFlag(ZERO, 1);
     else Registers_SetFlag(ZERO, 0);
     // Is a subtract so set to true
     Registers_SetFlag(SUBTRACT, 1);
@@ -338,8 +334,7 @@ static void DEC_r8(r8Enum target) {
 }
 
 static void DEC_r16(r16Enum target) {
-    unsigned short value = ReadFromR16(target) - 1;
-    WriteToR16(target, value);
+    WriteToR16(target, ReadFromR16(target) - 1);
 }
 
 static void DI() {
@@ -373,8 +368,7 @@ static void INC_r8(r8Enum target) {
 }
 
 static void INC_r16(r16Enum target) {
-    unsigned short value = ReadFromR16(target) + 1;
-    WriteToR16(target, value);
+    WriteToR16(target, ReadFromR16(target) + 1);
 }
 
 static unsigned short JP(unsigned short value) {
@@ -429,9 +423,8 @@ static void OR(unsigned char value) {
 }
 
 static void POP(r16Enum r) {
-    unsigned short value =  Memory_Read(registers.sp) |  (Memory_Read(registers.sp + 1) << 8);
+    WriteToR16(r, Memory_Read(registers.sp) | (Memory_Read(registers.sp + 1) << 8));
     registers.sp += 2;
-    WriteToR16(r, value);
 }
 
 static void PUSH(unsigned short value) {
@@ -446,7 +439,7 @@ static unsigned short CALL(unsigned short value) {
 }
 
 static unsigned short RET() {
-    unsigned short value =  Memory_Read(registers.sp) |  (Memory_Read(registers.sp + 1) << 8);
+    unsigned short value = Memory_Read(registers.sp) |  (Memory_Read(registers.sp + 1) << 8);
     registers.sp += 2;
     return value;
 }
@@ -463,7 +456,7 @@ static void SBC_A(unsigned char value) {
     registers.a = registers.a - value - (unsigned char)Registers_GetFlag(CARRY);
 
     // Check if overflown from bit 7
-    if (value  > registers.a) Registers_SetFlag(CARRY, 1);
+    if (value > registers.a) Registers_SetFlag(CARRY, 1);
     else Registers_SetFlag(CARRY, 0);
     // Check if overflown from bit 3
     if ((value & 0x0F) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
@@ -581,7 +574,6 @@ static void Table_alu_register(unsigned int index, r8Enum r) {
 // Rotation/shift operations
 static void Table_rot(unsigned int index, r8Enum r) {
     unsigned char value = ReadFromR8(r);
-
     switch (index) {
         case 0:
             CPU_MissingInstruction("RLC(value)");
@@ -616,13 +608,14 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
     unsigned char instr = Memory_Read(address);
 
     // Prefix CB
-    if (instr == (unsigned char)0xCB) {
+    if (instr == 0xCB) {
 
         // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
         // Uses next byte as first byte is prefix
-        unsigned char x = Memory_Read(address + 1) >> 6;
-        unsigned char y = (Memory_Read(address + 1) >> 3) & 0x07;
-        unsigned char z = Memory_Read(address + 1) & 0x07;
+        instr = Memory_Read(address + 1);
+        unsigned char x = instr >> 6;
+        unsigned char y = (instr >> 3) & 0x07;
+        unsigned char z = instr & 0x07;
 
         switch (x) {
             // Roll/shift register or memory location
