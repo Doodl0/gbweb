@@ -1,4 +1,6 @@
+#include <SDL3/SDL_stdinc.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <SDL3/SDL.h>
 
 #ifdef __EMSCRIPTEN__
@@ -17,7 +19,7 @@ EMSCRIPTEN_KEEPALIVE int LoadFile(const uint8_t *buffer, size_t size) {
   SDL_Log("ROM %.16s loaded, buffer %p size %zu", buffer + 0x134, &buffer, size);
 
   // do whatever you need with the file contents
-  Memory_Set((unsigned char *) buffer, size);
+  Memory_Set((Uint8 *) buffer, size);
   return 0;
 }
 
@@ -26,11 +28,11 @@ EMSCRIPTEN_KEEPALIVE int LoadFile(const uint8_t *buffer, size_t size) {
 // TODO: Check file size
 void LoadFile(char* filename) {
     FILE* file = fopen(filename, "rb");
-    unsigned char buffer[0x8000];
-    unsigned char *ptr = buffer;
-    fread(ptr, sizeof(unsigned char), 0x8000, file);
+    Uint8 buffer[0x8000];
+    Uint8 *ptr = buffer;
+    fread(ptr, sizeof(Uint8), 0x8000, file);
 
-    SDL_Log("ROM %.16s loaded from file, buffer %p size %zu" , ptr + 0x134, &ptr, (unsigned long)0x8000);
+    SDL_Log("ROM %.16s loaded from file, buffer %p size %u" , ptr + 0x134, &ptr, 0x8000);
 
     Memory_Set(ptr,0x8000);
     fclose(file);

@@ -1,19 +1,18 @@
-#include <stdint.h>
-#include <stdio.h>
+#include <SDL3/SDL_stdinc.h>
 #include <registers.h>
 
 typedef struct memoryBus {
-    unsigned char memory[0xFFFF];
+    Uint8 memory[0xFFFF];
 } memoryBus;
 
 extern memoryBus memory;
-extern unsigned char ime;
+extern Uint8 ime;
 
-void Memory_Write(unsigned short address, unsigned short value);
+void Memory_Write(Uint16 address, Uint16 value);
 
-unsigned short Memory_Read(unsigned short address);
+Uint16 Memory_Read(Uint16 address);
 
-void Memory_Set(unsigned char* buffer, size_t size);
+void Memory_Set(Uint8* buffer, Uint32 size);
 
 void Memory_LogInit();
 

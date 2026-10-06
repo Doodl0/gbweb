@@ -1,48 +1,49 @@
+#include <SDL3/SDL_stdinc.h>
 // Memory and registers
 
 typedef struct registers {
     struct {
         union {
             struct {
-                unsigned char f;
-                unsigned char a;
+                Uint8 f;
+                Uint8 a;
             };
-            unsigned short af;
+            Uint16 af;
         };
     };
 
     struct {
         union {
             struct {
-                unsigned char c;
-                unsigned char b;
+                Uint8 c;
+                Uint8 b;
             };
-            unsigned short bc;
+            Uint16 bc;
         };
     };
 
     struct {
         union {
             struct {
-                unsigned char e;
-                unsigned char d;
+                Uint8 e;
+                Uint8 d;
             };
-            unsigned short de;
+            Uint16 de;
         };
     };
 
     struct {
         union {
             struct {
-                unsigned char l;
-                unsigned char h;
+                Uint8 l;
+                Uint8 h;
             };
-            unsigned short hl;
+            Uint16 hl;
         };
     };
 
-    unsigned short pc;
-    unsigned short sp;
+    Uint16 pc;
+    Uint16 sp;
 
 } registersStruct;
 
@@ -68,6 +69,6 @@ typedef enum flags {
     CARRY
 } flags;
 
-void Registers_SetFlag(enum flags flag, unsigned int value);
+void Registers_SetFlag(enum flags flag, Uint8 value);
 
-unsigned int Registers_GetFlag(enum flags flag);
+Uint8 Registers_GetFlag(enum flags flag);

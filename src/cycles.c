@@ -2,7 +2,7 @@
 #include <cycles.h>
 #include <SDL3/SDL_timer.h>
 
-unsigned int unwaitedCycles = 0;
+Uint8 unwaitedCycles = 0;
 
 Uint64 cycleStart = 0;
 
@@ -10,7 +10,7 @@ Uint64 cycleStart = 0;
 const Uint64 CYCLE_TIME_NS = ((1 / (4.194304 * 1000000)) * 1000000000);
 
 // Add the amount of cycles an instruction takes (Multiply by 4 to get T cycles rather than m cycles)
-void Cycle_Add(int amount) {
+void Cycle_Add(Uint8 amount) {
     unwaitedCycles += amount * 4;
 }
 
@@ -26,7 +26,7 @@ void Cycle_Wait() {
     SDL_DelayNS(cycleTime - timeElapsed);
 }
 
-unsigned int Cycle_Get() {
+Uint8 Cycle_Get() {
     return unwaitedCycles;
 }
 

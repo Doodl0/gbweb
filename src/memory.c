@@ -4,22 +4,22 @@
 #include <memory.h>
 
 memoryBus memory;
-unsigned char ime = 0;
+Uint8 ime = 0;
 static FILE* log;
 
-void Memory_Write(unsigned short address, unsigned short value) {
+void Memory_Write(Uint16 address, Uint16 value) {
     memory.memory[address] = value;
 }
 
-unsigned short Memory_Read(unsigned short address) {
+Uint16 Memory_Read(Uint16 address) {
     return memory.memory[address];
 }
 
-void Memory_Set(unsigned char* buffer, size_t size) {
-    for (size_t i = 0; i < size - 1; i++) {
+void Memory_Set(Uint8* buffer, Uint32 size) {
+    for (Uint32 i = 0; i < size - 1; i++) {
         Memory_Write(i, buffer[i]);
     }
-    SDL_Log("ROM %.16s loaded into GB memory, buffer %p size %zu", (&memory.memory[0]) + 0x134, &memory.memory, size);
+    SDL_Log("ROM %.16s loaded into GB memory, buffer %p size %u", (&memory.memory[0]) + 0x134, &memory.memory, size);
 }
 
 void Memory_LogInit() {

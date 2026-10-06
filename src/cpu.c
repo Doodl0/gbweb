@@ -17,7 +17,7 @@ static void CPU_MissingInstruction(char *instruction) {
 }
 
 // Modifiying registers based on enums
-void WriteToR8(r8Enum target, unsigned char value) {
+void WriteToR8(r8Enum target, Uint8 value) {
     switch (target) {
         case A:
             registers.a = value;
@@ -45,7 +45,7 @@ void WriteToR8(r8Enum target, unsigned char value) {
     }
 }
 
-void WriteToR16(r16Enum target, unsigned short value) {
+void WriteToR16(r16Enum target, Uint16 value) {
     switch (target) {
         case BC:
             registers.bc = value;
@@ -68,7 +68,7 @@ void WriteToR16(r16Enum target, unsigned short value) {
     }
 }
 
-unsigned char ReadFromR8(r8Enum r) {
+Uint8 ReadFromR8(r8Enum r) {
     switch (r) {
         case A:
             return registers.a;
@@ -97,8 +97,8 @@ unsigned char ReadFromR8(r8Enum r) {
     return 0;
 }
 
-unsigned short ReadFromR16(r16Enum r) {
-    unsigned short value;
+Uint16 ReadFromR16(r16Enum r) {
+    Uint16 value;
     switch (r) {
         case BC:
             return registers.bc;
@@ -144,7 +144,7 @@ bool ConditionCodeCheck(ccEnum cc) {
 // Value tables
 
 // 8-bit registers
-static r8Enum Table_r(unsigned int index) {
+static r8Enum Table_r(Uint8 index) {
     switch (index) {
         case 0:
             return B;
@@ -174,7 +174,7 @@ static r8Enum Table_r(unsigned int index) {
     return B;
 }
 // Register pairs featuring SP
-static r16Enum Table_rp(unsigned int index) {
+static r16Enum Table_rp(Uint8 index) {
     switch (index) {
         case 0:
             return BC;
@@ -192,7 +192,7 @@ static r16Enum Table_rp(unsigned int index) {
         return BC;
 }
 // Register pairs featuring AF
-static r16Enum Table_rp2(unsigned int index) {
+static r16Enum Table_rp2(Uint8 index) {
     switch (index) {
         case 0:
             return BC;
@@ -210,7 +210,7 @@ static r16Enum Table_rp2(unsigned int index) {
         return BC;
 }
 // Condition codes
-static ccEnum Table_cc(unsigned int index) {
+static ccEnum Table_cc(Uint8 index) {
     switch (index) {
         case 0:
             return NZ;
@@ -229,8 +229,8 @@ static ccEnum Table_cc(unsigned int index) {
 }
 
 // Instructions
-static void ADC_A(unsigned char value) {
-    unsigned char carry = Registers_GetFlag(CARRY);
+static void ADC_A(Uint8 value) {
+    Uint8 carry = Registers_GetFlag(CARRY);
 
     // Check if overflown from bit 3
     if ((registers.a & 0x0F) + (value & 0x0F) + carry > 0x0F) Registers_SetFlag(HALF_CARRY, 1);
@@ -240,7 +240,7 @@ static void ADC_A(unsigned char value) {
     int result = registers.a + (value + carry);
 
     // Make sure the value is shortened to 8 bits
-    registers.a = (unsigned char)(result & 0xFF);
+    registers.a = (Uint8)(result & 0xFF);
 
     // Check if overflown from bit 7
     if (result & 0xFF00) Registers_SetFlag(CARRY, 1);
@@ -252,7 +252,7 @@ static void ADC_A(unsigned char value) {
     Registers_SetFlag(SUBTRACT, 0);
 }
 
-static void ADD_HL(unsigned short value) {
+static void ADD_HL(Uint16 value) {
     // Add register A and the input value
     int result = registers.hl + value;
 
@@ -261,7 +261,7 @@ static void ADD_HL(unsigned short value) {
     else Registers_SetFlag(HALF_CARRY, 0);
 
     // Make sure the value is shortened to 8 bits
-    registers.hl = (unsigned short)(result & 0xFFFF);
+    registers.hl = (Uint16)(result & 0xFFFF);
 
     // Check if overflown from bit 15
     if (result & 0xFFFF0000) Registers_SetFlag(CARRY, 1);
@@ -271,7 +271,7 @@ static void ADD_HL(unsigned short value) {
     Registers_SetFlag(SUBTRACT, 0);
 }
 
-static void ADD_A(unsigned char value) {
+static void ADD_A(Uint8 value) {
     // Add register A and the input value
     int result = registers.a + value;
 
@@ -280,7 +280,7 @@ static void ADD_A(unsigned char value) {
     else Registers_SetFlag(HALF_CARRY, 0);
 
     // Make sure the value is shortened to 8 bits
-    registers.a = (unsigned char)(result & 0xFF);
+    registers.a = (Uint8)(result & 0xFF);
 
     // Check if overflown from bit 7
     if (result & 0xFF00) Registers_SetFlag(CARRY, 1);
@@ -292,7 +292,7 @@ static void ADD_A(unsigned char value) {
     Registers_SetFlag(SUBTRACT, 0);
 }
 
-static void AND(unsigned char value) {
+static void AND(Uint8 value) {
     // Bitwise AND of A and value
     registers.a = registers.a & value;
 
@@ -304,7 +304,7 @@ static void AND(unsigned char value) {
     Registers_SetFlag(SUBTRACT, 0);
 }
 
-static void CP(unsigned char value) {
+static void CP(Uint8 value) {
     // Compare and set flags
 
     // Check if overflown from bit 7
@@ -321,7 +321,7 @@ static void CP(unsigned char value) {
 }
 
 static void DEC_r8(r8Enum target) {
-    unsigned char value = ReadFromR8(target) - 1;
+    Uint8 value = ReadFromR8(target) - 1;
     WriteToR8(target, value);
     // Check if overflown from bit 3
     if ((value + 1) & 0x0F) Registers_SetFlag(HALF_CARRY, 0);
@@ -355,7 +355,7 @@ static void HALT() {
 }
 
 static void INC_r8(r8Enum target) {
-    unsigned char value = ReadFromR8(target) + 1;
+    Uint8 value = ReadFromR8(target) + 1;
     WriteToR8(target, value);
     // Check if overflown from bit 3
     if (((value - 1) & 0x0F) == 0x0F) Registers_SetFlag(HALF_CARRY, 1);
@@ -371,43 +371,43 @@ static void INC_r16(r16Enum target) {
     WriteToR16(target, ReadFromR16(target) + 1);
 }
 
-static unsigned short JP(unsigned short value) {
+static Uint16 JP(Uint16 value) {
     return value;
 }
 
-static unsigned short JR(signed char value) {
+static Uint16 JR(Sint8 value) {
     return JP((registers.pc + 2) + value);
 }
 
 // Copy from byte at address n16 into A
-static void LD_A_n16(unsigned short value) {
+static void LD_A_n16(Uint16 value) {
     WriteToR8(A, Memory_Read(value));
 }
 
 // Copy from n8 into r8
-static void LD_r8_n8(r8Enum r8Target, unsigned char value) {
+static void LD_r8_n8(r8Enum r8Target, Uint8 value) {
     WriteToR8(r8Target, value);
 }
 
 // Copy from n8 into byte at address n16
-static void LD_n16_n8(unsigned short target, unsigned char value) {
+static void LD_n16_n8(Uint16 target, Uint8 value) {
     Memory_Write(target, value);
 }
 
 // Copy from value into r16
-static void LD_r16_n16(r16Enum r16, unsigned short value) {
+static void LD_r16_n16(r16Enum r16, Uint16 value) {
     WriteToR16(r16, value);
 }
 
 // Copy from SP to memory
-static void LD_n16_n16(unsigned short address, unsigned short value) {
-    Memory_Write(address, (unsigned char)(registers.sp & 0xFF));
-    Memory_Write(address + 1, (unsigned char)(registers.sp >> 8));
+static void LD_n16_n16(Uint16 address, Uint16 value) {
+    Memory_Write(address, (Uint8)(registers.sp & 0xFF));
+    Memory_Write(address + 1, (Uint8)(registers.sp >> 8));
 }
 
 static void NOP() {}
 
-static void OR(unsigned char value) {
+static void OR(Uint8 value) {
     // Bitwise XOR of A and value
     registers.a = registers.a | value;
 
@@ -427,33 +427,33 @@ static void POP(r16Enum r) {
     registers.sp += 2;
 }
 
-static void PUSH(unsigned short value) {
+static void PUSH(Uint16 value) {
     registers.sp-=2;
-    Memory_Write(registers.sp + 1, (unsigned char)((value & 0xFF00) >> 8));
-    Memory_Write(registers.sp, (unsigned char)((value & 0x00FF)));
+    Memory_Write(registers.sp + 1, (Uint8)((value & 0xFF00) >> 8));
+    Memory_Write(registers.sp, (Uint8)((value & 0x00FF)));
 }
 
-static unsigned short CALL(unsigned short value) {
+static Uint16 CALL(Uint16 value) {
     PUSH(registers.pc + 3);
     return JP(value);
 }
 
-static unsigned short RET() {
-    unsigned short value = Memory_Read(registers.sp) |  (Memory_Read(registers.sp + 1) << 8);
+static Uint16 RET() {
+    Uint16 value = Memory_Read(registers.sp) |  (Memory_Read(registers.sp + 1) << 8);
     registers.sp += 2;
     return value;
 }
 
-static unsigned short RETI() {
+static Uint16 RETI() {
     EI();
     return RET();
 }
 
-static unsigned short RST() {}
+static Uint16 RST() {}
 
-static void SBC_A(unsigned char value) {
+static void SBC_A(Uint8 value) {
     // Subtract carry flag and the input value from register A
-    registers.a = registers.a - value - (unsigned char)Registers_GetFlag(CARRY);
+    registers.a = registers.a - value - (Uint8)Registers_GetFlag(CARRY);
 
     // Check if overflown from bit 7
     if (value > registers.a) Registers_SetFlag(CARRY, 1);
@@ -468,7 +468,7 @@ static void SBC_A(unsigned char value) {
     Registers_SetFlag(SUBTRACT, 1);
 }
 
-static void SUB(unsigned char value) {
+static void SUB(Uint8 value) {
     // Check if overflown from bit 7
     if (value > registers.a) Registers_SetFlag(CARRY, 1);
     else Registers_SetFlag(CARRY, 0);
@@ -486,7 +486,7 @@ static void SUB(unsigned char value) {
     Registers_SetFlag(SUBTRACT, 1);
 }
 
-static unsigned char SRL(unsigned char value) {
+static Uint8 SRL(Uint8 value) {
     if(value & 0x01) Registers_SetFlag(CARRY, 1);
     else Registers_SetFlag(CARRY, 0);
 
@@ -501,8 +501,8 @@ static unsigned char SRL(unsigned char value) {
     return value;
 }
 
-static unsigned char RR(unsigned char value) {
-    unsigned char newValue = (value >> 1) | (Registers_GetFlag(CARRY) << 7);
+static Uint8 RR(Uint8 value) {
+    Uint8 newValue = (value >> 1) | (Registers_GetFlag(CARRY) << 7);
 
     if((value & 0x01)) Registers_SetFlag(CARRY, 1);
     else Registers_SetFlag(CARRY, 0);
@@ -521,7 +521,7 @@ static void RRA() {
     Registers_SetFlag(ZERO, 0);
 }
 
-static void XOR(unsigned char value) {
+static void XOR(Uint8 value) {
     // Bitwise XOR of A and value
     registers.a = registers.a ^ value;
 
@@ -539,7 +539,7 @@ static void XOR(unsigned char value) {
 // Instruction tables
 
 // Arithmetic/logic operations
-static void Table_alu(unsigned int index, unsigned char value) {
+static void Table_alu(Uint8 index, Uint8 value) {
     switch (index) {
         case 0:
             ADD_A(value);
@@ -568,12 +568,12 @@ static void Table_alu(unsigned int index, unsigned char value) {
     }
 }
 // alu table but accepts a register input, then passes value to main alu function
-static void Table_alu_register(unsigned int index, r8Enum r) {
+static void Table_alu_register(Uint8 index, r8Enum r) {
     Table_alu(index, ReadFromR8(r));
 }
 // Rotation/shift operations
-static void Table_rot(unsigned int index, r8Enum r) {
-    unsigned char value = ReadFromR8(r);
+static void Table_rot(Uint8 index, r8Enum r) {
+    Uint8 value = ReadFromR8(r);
     switch (index) {
         case 0:
             CPU_MissingInstruction("RLC(value)");
@@ -604,8 +604,8 @@ static void Table_rot(unsigned int index, r8Enum r) {
 }
 
 // Executes an instruction and returns new pc address
-unsigned short CPU_ExecuteInstruction(unsigned short address) {
-    unsigned char instr = Memory_Read(address);
+Uint16 CPU_ExecuteInstruction(Uint16 address) {
+    Uint8 instr = Memory_Read(address);
 
     // Prefix CB
     if (instr == 0xCB) {
@@ -613,9 +613,9 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
         // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
         // Uses next byte as first byte is prefix
         instr = Memory_Read(address + 1);
-        unsigned char x = instr >> 6;
-        unsigned char y = (instr >> 3) & 0x07;
-        unsigned char z = instr & 0x07;
+        Uint8 x = instr >> 6;
+        Uint8 y = (instr >> 3) & 0x07;
+        Uint8 z = instr & 0x07;
 
         switch (x) {
             // Roll/shift register or memory location
@@ -652,13 +652,13 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
     else {
 
         // Variables based on https://archive.gbdev.io/salvage/decoding_gbz80_opcodes/Decoding Gamboy Z80 Opcodes.html
-        unsigned char x = instr >> 6;
-        unsigned char y = (instr >> 3) & 0x07;
-        unsigned char z = instr & 0x07;
-        unsigned char p = y >> 1;
-        unsigned char q = y % 2;
-        unsigned char n = Memory_Read(address + 1);
-        unsigned short nn = ((unsigned short)(n)) | (((unsigned short)Memory_Read(address + 2)) << 8);
+        Uint8 x = instr >> 6;
+        Uint8 y = (instr >> 3) & 0x07;
+        Uint8 z = instr & 0x07;
+        Uint8 p = y >> 1;
+        Uint8 q = y % 2;
+        Uint8 n = Memory_Read(address + 1);
+        Uint16 nn = ((Uint16)(n)) | (((Uint16)Memory_Read(address + 2)) << 8);
 
         switch (x) {
             case 0:
@@ -681,13 +681,13 @@ unsigned short CPU_ExecuteInstruction(unsigned short address) {
                                 return (address + 1);
                                 break;
                             case 3:
-                                return JR((signed char) n);
+                                return JR((Sint8) n);
                                 Cycle_Add(3);
                                 break;
                             case 4 ... 7:
                                 if (ConditionCodeCheck(Table_cc(y-4))) {
                                     Cycle_Add(3);
-                                    return JR((signed char) n);
+                                    return JR((Sint8) n);
                                 }
                                 else {
                                     Cycle_Add(2);
@@ -1106,7 +1106,7 @@ void CPU_Init() {
 }
 
 void CPU_ListInstructions() {
-    for (unsigned char instr = 0; instr < 0xFF; instr ++) {
+    for (Uint8 instr = 0; instr < 0xFF; instr ++) {
         Cycle_Start();
         memory.memory[0] = instr;
         registers.pc = 0;
