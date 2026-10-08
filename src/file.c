@@ -14,7 +14,7 @@
 
 #ifdef __EMSCRIPTEN__
 
-EMSCRIPTEN_KEEPALIVE int LoadFile(const uint8_t *buffer, size_t size) {
+EMSCRIPTEN_KEEPALIVE int LoadFile(const Uint8 *buffer, size_t size) {
   /// Load a file - this function is called from javascript when the file upload is activated
   SDL_Log("ROM %.16s loaded, buffer %p size %zu", buffer + 0x134, &buffer, size);
 

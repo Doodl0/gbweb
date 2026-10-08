@@ -7,7 +7,7 @@ memoryBus memory;
 Uint8 ime = 0;
 static FILE* log;
 
-void Memory_Write(Uint16 address, Uint16 value) {
+void Memory_Write(Uint16 address, Uint8 value) {
     memory.memory[address] = value;
 }
 

@@ -8,7 +8,7 @@ typedef struct memoryBus {
 extern memoryBus memory;
 extern Uint8 ime;
 
-void Memory_Write(Uint16 address, Uint16 value);
+void Memory_Write(Uint16 address, Uint8 value);
 
 Uint16 Memory_Read(Uint16 address);
 

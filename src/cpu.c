@@ -1,3 +1,4 @@
+#include "SDL3/SDL_stdinc.h"
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL.h>
 #include <stdlib.h>
@@ -449,7 +450,10 @@ static Uint16 RETI() {
     return RET();
 }
 
-static Uint16 RST() {}
+static Uint16 RST(Uint8 vec) {
+    PUSH(registers.pc + 1);
+    return JP((Uint16)vec);
+}
 
 static void SBC_A(Uint8 value) {
     // Subtract carry flag and the input value from register A
@@ -1066,9 +1070,8 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
 
                     // Restart
                     case 7:
-                        CPU_MissingInstruction("RST y*8");
                         Cycle_Add(4);
-                        return (address + 1);
+                        return RST(y*8);
                     break;
                 }
             break;

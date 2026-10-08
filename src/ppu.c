@@ -1,3 +1,4 @@
+#include "SDL3/SDL_stdinc.h"
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
@@ -17,7 +18,7 @@ const Uint64 FPS = (1 / 59.7) * 1000000000;
 
 Uint64 renderStart = 0;
 
-typedef char tile[8][8];
+typedef Uint8 tile[8][8];
 
 struct VRAM{
     tile tileSet[384];
