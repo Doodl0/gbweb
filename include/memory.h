@@ -2,7 +2,23 @@
 #include <registers.h>
 
 typedef struct memoryBus {
-    Uint8 memory[0xFFFF];
+    union {
+        struct {
+            Uint8 ROMBank0[0x4000];
+            Uint8 ROMBank1[0x4000];
+            Uint8 VRAM[0x2000];
+            Uint8 externalRAM[0x4000];
+            Uint8 WRAM0[0x1000];
+            Uint8 WRAM1[0x1000];
+            Uint8 echoRAM[0x1E00];
+            Uint8 OAM[0xA0];
+            Uint8 prohibited[0x60];
+            Uint8 IO[0x80];
+            Uint8 HRAM[0x7F];
+            Uint8 IE;
+        };
+        Uint8 memory[0x10000];
+    };
 } memoryBus;
 
 extern memoryBus memory;
