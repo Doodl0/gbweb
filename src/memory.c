@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <SDL3/SDL_log.h>
 #include <memory.h>
 

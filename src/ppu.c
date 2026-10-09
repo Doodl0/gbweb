@@ -16,6 +16,6 @@ const unsigned short VRAMSize = (VRAM_END - VRAM_BEGIN + 1);
 
 typedef Uint8 tile[8][8];
 
-int Render() {
+void Render() {
 
 }

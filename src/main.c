@@ -52,7 +52,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // This is a lot more efficient that using the CPU as many times per second and then rendering at 60FPS
     // because of SDL bottlenecks, meaning this function can't run that fast.
 
-    if (SDL_GetTicksNS() - frameStart >= FPS) {
+    if (SDL_GetTicksNS() - frameStart > FPS) {
         CPU_Step();
 
         Render();

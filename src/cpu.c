@@ -1086,7 +1086,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
 }
 
 void CPU_Step() {
-    while((unwaitedCycles < CYCLES_PER_FRAME)&& !halted) {
+    while((unwaitedCycles < CYCLES_PER_FRAME) && !halted) {
         #ifndef NDEBUG
         Memory_Log(memory, registers);
         #endif
