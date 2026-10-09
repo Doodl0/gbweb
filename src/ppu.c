@@ -2,6 +2,7 @@
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_video.h>
+#include <memory.h>
 
 #define VRAM_BEGIN 0x8000
 #define VRAM_END 0x9FFF

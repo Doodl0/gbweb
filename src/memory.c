@@ -16,9 +16,7 @@ Uint16 Memory_Read(Uint16 address) {
 }
 
 void Memory_Set(Uint8* buffer, Uint32 size) {
-    for (Uint32 i = 0; i < size - 1; i++) {
-        Memory_Write(i, buffer[i]);
-    }
+    memcpy(&memory, buffer, 0x8000);
     SDL_Log("ROM %.16s loaded into GB memory, buffer %p size %u", (&memory.memory[0]) + 0x134, &memory.memory, size);
 }
 
