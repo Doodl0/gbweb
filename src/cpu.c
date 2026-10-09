@@ -5,8 +5,13 @@
 #include <memory.h>
 #include <cycles.h>
 
+#define CYCLES_PER_FRAME 70224
+
+bool halted = false;
+bool stopped = false;
+
 void CPU_Quit() {
-    Memory_LogDeinit();
+    Memory_Deinit();
     SDL_Quit();
     exit(1);
 }
@@ -348,7 +353,7 @@ static void EI() {
 
 static void HALT() {
     if (ime) {
-         SDL_Log("HALT here");
+         halted = true;
     }
     else {
         return;
@@ -685,8 +690,8 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 return (address + 1);
                                 break;
                             case 3:
-                                return JR((Sint8) n);
                                 Cycle_Add(3);
+                                return JR((Sint8) n);
                                 break;
                             case 4 ... 7:
                                 if (ConditionCodeCheck(Table_cc(y-4))) {
@@ -1081,12 +1086,13 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
 }
 
 void CPU_Step() {
-    Cycle_Start();
-    #ifndef NDEBUG
-    Memory_Log(memory, registers);
-    #endif
-    registers.pc = CPU_ExecuteInstruction(registers.pc);
-    Cycle_Wait();
+    while((unwaitedCycles < CYCLES_PER_FRAME)&& !halted) {
+        #ifndef NDEBUG
+        Memory_Log(memory, registers);
+        #endif
+        registers.pc = CPU_ExecuteInstruction(registers.pc);
+    }
+    unwaitedCycles -= CYCLES_PER_FRAME;
 }
 
 void CPU_Init() {
@@ -1114,6 +1120,6 @@ void CPU_ListInstructions() {
         memory.memory[0] = instr;
         registers.pc = 0;
         registers.pc = CPU_ExecuteInstruction(registers.pc);
-        SDL_Log("Instr %02X, Cycles %u, Bytes %i", instr, Cycle_Get(), registers.pc);
+        SDL_Log("Instr %02X, Cycles %u, Bytes %i", instr, unwaitedCycles, registers.pc);
     }
 }

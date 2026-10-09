@@ -2,7 +2,7 @@
 #include <cycles.h>
 #include <SDL3/SDL_timer.h>
 
-Uint8 unwaitedCycles = 0;
+Uint32 unwaitedCycles = 0;
 
 Uint64 cycleStart = 0;
 
@@ -26,7 +26,7 @@ void Cycle_Wait() {
     SDL_DelayNS(cycleTime - timeElapsed);
 }
 
-Uint8 Cycle_Get() {
+Uint32 Cycle_Get() {
     return unwaitedCycles;
 }
 

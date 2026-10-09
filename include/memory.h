@@ -34,4 +34,4 @@ void Memory_LogInit();
 
 void Memory_Log(memoryBus memory, registersStruct registers);
 
-void Memory_LogDeinit();
+void Memory_Deinit();

@@ -1,3 +1,4 @@
+#include "SDL3/SDL_timer.h"
 #define SDL_MAIN_USE_CALLBACKS 1  /* use the callbacks instead of main() */
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_main.h>
@@ -12,6 +13,10 @@
 
 // Emulator Settings
 #define RESOLUTION_SCALE 4
+
+// Set a constant frametime for an FPS limit
+const Uint64 FPS = (1 / 59.7) * 1000000000;
+Uint64 frameStart = 1000000;
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
@@ -42,8 +47,18 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 // Per frame iteration
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
-    CPU_Step();
-    if (Render()) {
+    // Only render 5.97 times per second
+    // Each frame runs the cpu for the amount of time that the CPU would use during a frame, and then renders
+    // This is a lot more efficient that using the CPU as many times per second and then rendering at 60FPS
+    // because of SDL bottlenecks, meaning this function can't run that fast.
+
+    if (SDL_GetTicksNS() - frameStart >= FPS) {
+        CPU_Step();
+
+        Render();
+
+        frameStart = SDL_GetTicksNS();
+
         char* message = "No ROM loaded";
         int w = 0, h = 0;
         float x, y;

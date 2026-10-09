@@ -14,25 +14,8 @@
 
 const unsigned short VRAMSize = (VRAM_END - VRAM_BEGIN + 1);
 
-// Set a constant frametime for an FPS limit
-const Uint64 FPS = (1 / 59.7) * 1000000000;
-
-Uint64 renderStart = 0;
-
 typedef Uint8 tile[8][8];
 
-struct VRAM{
-    tile tileSet[384];
-};
-
-void RenderTimerInit() {
-    renderStart = SDL_GetTicksNS();
-}
-
 int Render() {
-    if (SDL_GetTicksNS() - renderStart < FPS) return 0;
-    else {
-        renderStart = SDL_GetTicksNS();
-        return 1;
-    }
+
 }

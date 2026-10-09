@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <SDL3/SDL_log.h>
 #include <memory.h>
 
@@ -34,6 +35,6 @@ void Memory_Log(memoryBus memory, registersStruct registers) {
     #endif
 }
 
-void Memory_LogDeinit() {
+void Memory_Deinit() {
     fclose(log);
 }
