@@ -24,6 +24,14 @@ typedef struct memoryBus {
 extern memoryBus memory;
 extern Uint8 ime;
 
+void Registers_WriteR8(r8Enum target, Uint8 value);
+
+void Registers_WriteR16(r16Enum target, Uint16 value);
+
+Uint8 Registers_ReadR8(r8Enum r);
+
+Uint16 Registers_ReadR16(r16Enum r);
+
 void Memory_Write(Uint16 address, Uint8 value);
 
 Uint16 Memory_Read(Uint16 address);

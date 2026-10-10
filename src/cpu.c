@@ -22,112 +22,6 @@ static void CPU_MissingInstruction(char *instruction) {
     CPU_Quit();
 }
 
-// Modifiying registers based on enums
-void WriteToR8(r8Enum target, Uint8 value) {
-    switch (target) {
-        case A:
-            registers.a = value;
-            break;
-        case B:
-            registers.b = value;
-            break;
-        case C:
-            registers.c = value;
-            break;
-        case D:
-            registers.d = value;
-            break;
-        case E:
-            registers.e = value;
-            break;
-        case H:
-            registers.h = value;
-            break;
-        case L:
-            registers.l = value;
-            break;
-        case HL8:
-            Memory_Write(registers.hl, value);
-    }
-}
-
-void WriteToR16(r16Enum target, Uint16 value) {
-    switch (target) {
-        case BC:
-            registers.bc = value;
-            break;
-        case DE:
-            registers.de = value;
-            break;
-        case HL:
-            registers.hl = value;
-            break;
-        case SP:
-            registers.sp = value;
-            break;
-        case AF:
-            registers.af = value;
-            break;
-        case PC:
-            registers.pc = value;
-            break;
-    }
-}
-
-Uint8 ReadFromR8(r8Enum r) {
-    switch (r) {
-        case A:
-            return registers.a;
-            break;
-        case B:
-            return registers.b;
-            break;
-        case C:
-            return registers.c;
-            break;
-        case D:
-            return registers.d;
-            break;
-        case E:
-            return registers.e;
-            break;
-        case H:
-            return registers.h;
-            break;
-        case L:
-            return registers.l;
-            break;
-        case HL8:
-            return Memory_Read(registers.hl);
-    }
-    return 0;
-}
-
-Uint16 ReadFromR16(r16Enum r) {
-    Uint16 value;
-    switch (r) {
-        case BC:
-            return registers.bc;
-            break;
-        case DE:
-            return registers.de;
-            break;
-        case HL:
-            return registers.hl;
-            break;
-        case SP:
-            return registers.sp;
-            break;
-        case AF:
-            return registers.af;
-            break;
-        case PC:
-            return registers.pc;
-            break;
-    }
-    return 0;
-}
-
 // Flag checks
 bool ConditionCodeCheck(ccEnum cc) {
     switch(cc) {
@@ -327,8 +221,8 @@ static void CP(Uint8 value) {
 }
 
 static void DEC_r8(r8Enum target) {
-    Uint8 value = ReadFromR8(target) - 1;
-    WriteToR8(target, value);
+    Uint8 value = Registers_ReadR8(target) - 1;
+    Registers_WriteR8(target, value);
     // Check if overflown from bit 3
     if ((value + 1) & 0x0F) Registers_SetFlag(HALF_CARRY, 0);
     else Registers_SetFlag(HALF_CARRY, 1);
@@ -340,7 +234,7 @@ static void DEC_r8(r8Enum target) {
 }
 
 static void DEC_r16(r16Enum target) {
-    WriteToR16(target, ReadFromR16(target) - 1);
+    Registers_WriteR16(target, Registers_ReadR16(target) - 1);
 }
 
 static void DI() {
@@ -361,8 +255,8 @@ static void HALT() {
 }
 
 static void INC_r8(r8Enum target) {
-    Uint8 value = ReadFromR8(target) + 1;
-    WriteToR8(target, value);
+    Uint8 value = Registers_ReadR8(target) + 1;
+    Registers_WriteR8(target, value);
     // Check if overflown from bit 3
     if (((value - 1) & 0x0F) == 0x0F) Registers_SetFlag(HALF_CARRY, 1);
     else Registers_SetFlag(HALF_CARRY, 0);
@@ -374,7 +268,7 @@ static void INC_r8(r8Enum target) {
 }
 
 static void INC_r16(r16Enum target) {
-    WriteToR16(target, ReadFromR16(target) + 1);
+    Registers_WriteR16(target, Registers_ReadR16(target) + 1);
 }
 
 static Uint16 JP(Uint16 value) {
@@ -387,12 +281,12 @@ static Uint16 JR(Sint8 value) {
 
 // Copy from byte at address n16 into A
 static void LD_A_n16(Uint16 value) {
-    WriteToR8(A, Memory_Read(value));
+    Registers_WriteR8(A, Memory_Read(value));
 }
 
 // Copy from n8 into r8
 static void LD_r8_n8(r8Enum r8Target, Uint8 value) {
-    WriteToR8(r8Target, value);
+    Registers_WriteR8(r8Target, value);
 }
 
 // Copy from n8 into byte at address n16
@@ -402,7 +296,7 @@ static void LD_n16_n8(Uint16 target, Uint8 value) {
 
 // Copy from value into r16
 static void LD_r16_n16(r16Enum r16, Uint16 value) {
-    WriteToR16(r16, value);
+    Registers_WriteR16(r16, value);
 }
 
 // Copy from SP to memory
@@ -429,7 +323,7 @@ static void OR(Uint8 value) {
 }
 
 static void POP(r16Enum r) {
-    WriteToR16(r, Memory_Read(registers.sp) | (Memory_Read(registers.sp + 1) << 8));
+    Registers_WriteR16(r, Memory_Read(registers.sp) | (Memory_Read(registers.sp + 1) << 8));
     registers.sp += 2;
 }
 
@@ -578,11 +472,11 @@ static void Table_alu(Uint8 index, Uint8 value) {
 }
 // alu table but accepts a register input, then passes value to main alu function
 static void Table_alu_register(Uint8 index, r8Enum r) {
-    Table_alu(index, ReadFromR8(r));
+    Table_alu(index, Registers_ReadR8(r));
 }
 // Rotation/shift operations
 static void Table_rot(Uint8 index, r8Enum r) {
-    Uint8 value = ReadFromR8(r);
+    Uint8 value = Registers_ReadR8(r);
     switch (index) {
         case 0:
             CPU_MissingInstruction("RLC(value)");
@@ -609,7 +503,7 @@ static void Table_rot(Uint8 index, r8Enum r) {
             value = SRL(value);
             break;
     }
-    WriteToR8(r, value);
+    Registers_WriteR8(r, value);
 }
 
 // Executes an instruction and returns new pc address
@@ -715,7 +609,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 return (address + 3);
                                 break;
                             case 1:
-                                ADD_HL(ReadFromR16(Table_rp(p)));
+                                ADD_HL(Registers_ReadR16(Table_rp(p)));
                                 Cycle_Add(2);
                                 return (address + 1);
                                 break;
@@ -872,7 +766,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                 }
                 // 8-bit loading
                 else {
-                    LD_r8_n8(Table_r(y), ReadFromR8(Table_r(z)));
+                    LD_r8_n8(Table_r(y), Registers_ReadR8(Table_r(z)));
 
                     if ((Table_r(y) == HL8) || (Table_r(z) == HL8)) Cycle_Add(2);
                     else Cycle_Add(1);
@@ -1050,7 +944,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                     case 5:
                         switch (q) {
                             case 0:
-                                PUSH(ReadFromR16(Table_rp2(p)));
+                                PUSH(Registers_ReadR16(Table_rp2(p)));
                                 Cycle_Add(4);
                                 return (address + 1);
                                 break;

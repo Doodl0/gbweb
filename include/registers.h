@@ -2,44 +2,36 @@
 // Memory and registers
 
 typedef struct registers {
-    struct {
-        union {
-            struct {
-                Uint8 f;
-                Uint8 a;
-            };
-            Uint16 af;
+    union {
+        struct {
+            Uint8 f;
+            Uint8 a;
         };
+        Uint16 af;
+     };
+
+    union {
+        struct {
+            Uint8 c;
+            Uint8 b;
+        };
+        Uint16 bc;
     };
 
-    struct {
-        union {
-            struct {
-                Uint8 c;
-                Uint8 b;
-            };
-            Uint16 bc;
+    union {
+        struct {
+            Uint8 e;
+            Uint8 d;
         };
+        Uint16 de;
     };
 
-    struct {
-        union {
-            struct {
-                Uint8 e;
-                Uint8 d;
-            };
-            Uint16 de;
+    union {
+        struct {
+            Uint8 l;
+            Uint8 h;
         };
-    };
-
-    struct {
-        union {
-            struct {
-                Uint8 l;
-                Uint8 h;
-            };
-            Uint16 hl;
-        };
+        Uint16 hl;
     };
 
     Uint16 pc;
