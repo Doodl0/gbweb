@@ -42,7 +42,6 @@ bool ConditionCodeCheck(ccEnum cc) {
 }
 
 // Value tables
-
 // 8-bit registers
 static r8Enum Table_r(Uint8 index) {
     switch (index) {
@@ -355,17 +354,21 @@ static Uint16 RST(Uint8 vec) {
 }
 
 static void SBC_A(Uint8 value) {
-    // Subtract carry flag and the input value from register A
-    registers.a = registers.a - value - (Uint8)Registers_GetFlag(CARRY);
+    Uint8 carry = Registers_GetFlag(CARRY);
+
+    // Check if overflown from bit 3
+    if ((((value) & 0x0F) + carry) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
+    else Registers_SetFlag(HALF_CARRY, 0);
 
     // Check if overflown from bit 7
-    if (value > registers.a) Registers_SetFlag(CARRY, 1);
+    if ((value + carry) > (registers.a)) Registers_SetFlag(CARRY, 1);
     else Registers_SetFlag(CARRY, 0);
-    // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
-    else Registers_SetFlag(HALF_CARRY, 0);
+
+    // Subtract carry flag and the input value from register A
+    registers.a = registers.a - value - carry;
+
     // Check if 0
-    if (registers.a  == 0) Registers_SetFlag(ZERO, 1);
+    if (registers.a == 0) Registers_SetFlag(ZERO, 1);
     else Registers_SetFlag(ZERO, 0);
     // Is a subtract so set to true
     Registers_SetFlag(SUBTRACT, 1);
@@ -398,6 +401,18 @@ static Uint8 SRL(Uint8 value) {
     if(value == 0) Registers_SetFlag(ZERO, 1);
     else Registers_SetFlag(ZERO, 0);
 
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return value;
+}
+
+static Uint8 SWAP(Uint8 value) {
+    value = ((value & 0xF) << 4) | ((value & 0xF0) >> 4);
+
+    if(value == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+    Registers_SetFlag(CARRY, 0);
     Registers_SetFlag(HALF_CARRY, 0);
     Registers_SetFlag(SUBTRACT, 0);
 
@@ -497,7 +512,7 @@ static void Table_rot(Uint8 index, r8Enum r) {
             CPU_MissingInstruction("SRA(value)");
             break;
         case 6:
-            CPU_MissingInstruction("SWAP(value)");
+            value = SWAP(value);
             break;
         case 7:
             value = SRL(value);
