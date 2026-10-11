@@ -13,25 +13,3 @@ const Uint64 CYCLE_TIME_NS = ((1 / (4.194304 * 1000000)) * 1000000000);
 void Cycle_Add(Uint8 amount) {
     unwaitedCycles += amount * 4;
 }
-
-// Wait for the amount of time depending on instructions
-void Cycle_Wait() {
-    // Calculate time between start of instruction and current
-    Uint64 timeElapsed = SDL_GetTicksNS() - cycleStart;
-    // Amount of time the instruction should take
-    Uint64 cycleTime = (unwaitedCycles * CYCLE_TIME_NS);
-    // Prevent integer underflow and 5 century wait time
-    if (timeElapsed > cycleTime) return;
-    // Subtract the remaining time from the already elapsed time and delay
-    SDL_DelayNS(cycleTime - timeElapsed);
-}
-
-Uint32 Cycle_Get() {
-    return unwaitedCycles;
-}
-
-// Reset cycles and set timer start to current time
-void Cycle_Start() {
-    unwaitedCycles = 0;
-    cycleStart = SDL_GetTicksNS();
-}

@@ -1025,7 +1025,6 @@ void CPU_Init() {
 
 void CPU_ListInstructions() {
     for (Uint8 instr = 0; instr < 0xFF; instr ++) {
-        Cycle_Start();
         memory.memory[0] = instr;
         registers.pc = 0;
         registers.pc = CPU_ExecuteInstruction(registers.pc);
