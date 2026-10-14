@@ -1,3 +1,6 @@
+#include <stdbool.h>
+
 void CPU_Step();
 void CPU_Init();
-void CPU_ListInstructions();
+bool CPU_Halted();
+bool CPU_Stopped();

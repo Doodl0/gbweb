@@ -5,8 +5,6 @@
 #include <memory.h>
 #include <cycles.h>
 
-#define CYCLES_PER_FRAME 70224
-
 bool halted = false;
 bool stopped = false;
 
@@ -539,29 +537,29 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
             // Roll/shift register or memory location
             case 0:
                 Table_rot(y, Table_r(z));
-                if (Table_r(z) == HL8) Cycle_Add(4);
-                else Cycle_Add(2);
+                if (Table_r(z) == HL8) Cycles_Add(4);
+                else Cycles_Add(2);
                 break;
 
             // Test bit
             case 1:
                 CPU_MissingInstruction("BIT y, r[z]");
-                if (Table_r(z) == HL8) Cycle_Add(3);
-                else Cycle_Add(2);
+                if (Table_r(z) == HL8) Cycles_Add(3);
+                else Cycles_Add(2);
                 break;
 
             // Reset bit
             case 2:
                 CPU_MissingInstruction("RES y, r[z]");
-                if (Table_r(z) == HL8) Cycle_Add(4);
-                else Cycle_Add(2);
+                if (Table_r(z) == HL8) Cycles_Add(4);
+                else Cycles_Add(2);
                 break;
 
             // Set bit
             case 3:
                 CPU_MissingInstruction("SET y, r[z]");
-                if (Table_r(z) == HL8) Cycle_Add(4);
-                else Cycle_Add(2);
+                if (Table_r(z) == HL8) Cycles_Add(4);
+                else Cycles_Add(2);
                 break;
         }
         return (address + 2);
@@ -586,12 +584,12 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                         switch (y) {
                             case 0:
                                 NOP();
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                             case 1:
                                 LD_n16_n16(nn, registers.sp);
-                                Cycle_Add(5);
+                                Cycles_Add(5);
                                 return (address + 3);
                                 break;
                             case 2:
@@ -599,16 +597,16 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 return (address + 1);
                                 break;
                             case 3:
-                                Cycle_Add(3);
+                                Cycles_Add(3);
                                 return JR((Sint8) n);
                                 break;
                             case 4 ... 7:
                                 if (ConditionCodeCheck(Table_cc(y-4))) {
-                                    Cycle_Add(3);
+                                    Cycles_Add(3);
                                     return JR((Sint8) n);
                                 }
                                 else {
-                                    Cycle_Add(2);
+                                    Cycles_Add(2);
                                     return (address + 2);
                                 }
                                 break;
@@ -620,12 +618,12 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                         switch (q) {
                             case 0:
                                 LD_r16_n16(Table_rp(p), nn);
-                                Cycle_Add(3);
+                                Cycles_Add(3);
                                 return (address + 3);
                                 break;
                             case 1:
                                 ADD_HL(Registers_ReadR16(Table_rp(p)));
-                                Cycle_Add(2);
+                                Cycles_Add(2);
                                 return (address + 1);
                                 break;
                         }
@@ -638,24 +636,24 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 switch (p) {
                                     case 0:
                                         LD_n16_n8(registers.bc, registers.a);
-                                        Cycle_Add(2);
+                                        Cycles_Add(2);
                                         return (address + 1);
                                         break;
                                     case 1:
                                         LD_n16_n8(registers.de, registers.a);
-                                        Cycle_Add(2);
+                                        Cycles_Add(2);
                                         return (address + 1);
                                         break;
                                     case 2:
                                         LD_n16_n8(registers.hl, registers.a);
                                         registers.hl++;
-                                        Cycle_Add(2);
+                                        Cycles_Add(2);
                                         return (address + 1);
                                         break;
                                     case 3:
                                         LD_n16_n8(registers.hl, registers.a);
                                         registers.hl--;
-                                        Cycle_Add(2);
+                                        Cycles_Add(2);
                                         return (address + 1);
                                         break;
                                 }
@@ -663,24 +661,24 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 switch (p) {
                                     case 0:
                                         LD_r8_n8(A, Memory_Read(registers.bc));
-                                        Cycle_Add(2);
+                                        Cycles_Add(2);
                                         return (address + 1);
                                         break;
                                     case 1:
                                         LD_r8_n8(A, Memory_Read(registers.de));
-                                        Cycle_Add(2);
+                                        Cycles_Add(2);
                                         return (address + 1);
                                         break;
                                     case 2:
                                         LD_r8_n8(A, Memory_Read(registers.hl));
                                         registers.hl++;
-                                        Cycle_Add(2);
+                                        Cycles_Add(2);
                                         return (address + 1);
                                         break;
                                     case 3:
                                         LD_r8_n8(A, Memory_Read(registers.hl));
                                         registers.hl--;
-                                        Cycle_Add(2);
+                                        Cycles_Add(2);
                                         return (address + 1);
                                         break;
                                 }
@@ -693,12 +691,12 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                         switch (q) {
                             case 0:
                                 INC_r16(Table_rp(p));
-                                Cycle_Add(2);
+                                Cycles_Add(2);
                                 return (address + 1);
                                 break;
                             case 1:
                                 DEC_r16(Table_rp(p));
-                                Cycle_Add(2);
+                                Cycles_Add(2);
                                 return (address + 1);
                                 break;
                         }
@@ -707,21 +705,21 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                     // 8-bit INC
                     case 4:
                         INC_r8(Table_r(y));
-                        Cycle_Add(1);
+                        Cycles_Add(1);
                         return (address + 1);
                     break;
 
                     // 8-bit DEC
                     case 5:
                         DEC_r8(Table_r(y));
-                        Cycle_Add(1);
+                        Cycles_Add(1);
                         return (address + 1);
                     break;
 
                     // 8-bit load immediate
                     case 6:
                         LD_r8_n8(Table_r(y), n);
-                        Cycle_Add(2);
+                        Cycles_Add(2);
                         return (address + 2);
                     break;
 
@@ -730,42 +728,42 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                         switch (y) {
                             case 0:
                                 CPU_MissingInstruction("RLCA");
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                             case 1:
                                 CPU_MissingInstruction("RRCA");
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                             case 2:
                                 CPU_MissingInstruction("RLA");
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                             case 3:
                                 RRA();
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                             case 4:
                                 CPU_MissingInstruction("DAA");
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                             case 5:
                                 CPU_MissingInstruction("CPL");
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                             case 6:
                                 CPU_MissingInstruction("SCF");
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                             case 7:
                                 CPU_MissingInstruction("CCF");
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                         }
@@ -783,8 +781,8 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                 else {
                     LD_r8_n8(Table_r(y), Registers_ReadR8(Table_r(z)));
 
-                    if ((Table_r(y) == HL8) || (Table_r(z) == HL8)) Cycle_Add(2);
-                    else Cycle_Add(1);
+                    if ((Table_r(y) == HL8) || (Table_r(z) == HL8)) Cycles_Add(2);
+                    else Cycles_Add(1);
 
                     return (address + 1);
                 }
@@ -794,8 +792,8 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                 // Operate on accumulator and register/memory location
                 Table_alu_register(y, Table_r(z));
 
-                if (Table_r(z) == HL8) Cycle_Add(2);
-                else Cycle_Add(1);
+                if (Table_r(z) == HL8) Cycles_Add(2);
+                else Cycles_Add(1);
 
                 return (address + 1);
             break;
@@ -807,36 +805,36 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                         switch (y) {
                             case 0 ... 3:
                                 if (ConditionCodeCheck(Table_cc(y))) {
-                                    Cycle_Add(5);
+                                    Cycles_Add(5);
                                     return RET();
                                 }
                                 else {
-                                    Cycle_Add(2);
+                                    Cycles_Add(2);
                                     return (address + 1);
                                 }
                                 break;
 
                             case 4:
                                 LD_n16_n8((0xFF00 + n), registers.a);
-                                Cycle_Add(3);
+                                Cycles_Add(3);
                                 return (address + 2);
                                 break;
 
                             case 5:
                                 CPU_MissingInstruction("ADD SP, d");
-                                Cycle_Add(4);
+                                Cycles_Add(4);
                                 return (address + 2);
                                 break;
 
                             case 6:
                                 LD_A_n16(0xFF00 + n);
-                                Cycle_Add(3);
+                                Cycles_Add(3);
                                 return (address + 2);
                                 break;
 
                             case 7:
                                 CPU_MissingInstruction("LD HL, SP+ d");
-                                Cycle_Add(3);
+                                Cycles_Add(3);
                                 return (address + 2);
                                 break;
                         }
@@ -847,29 +845,29 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                         switch (q) {
                             case 0:
                                 POP(Table_rp2(p));
-                                Cycle_Add(3);
+                                Cycles_Add(3);
                                 return (address + 1);
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        Cycle_Add(4);
+                                        Cycles_Add(4);
                                         return RET();
                                         break;
 
                                     case 1:
-                                        Cycle_Add(4);
+                                        Cycles_Add(4);
                                         return RETI();
                                         break;
 
                                     case 2:
-                                        Cycle_Add(1);
+                                        Cycles_Add(1);
                                         return JP(registers.hl);
                                         break;
 
                                     case 3:
-                                        Cycle_Add(2);
+                                        Cycles_Add(2);
                                         registers.sp = registers.hl; // LD SP HL
                                         return (address + 1);
                                         break;
@@ -883,24 +881,24 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                         switch (y) {
                             case 0 ... 3:
                                 if (ConditionCodeCheck(Table_cc(y))) {
-                                    Cycle_Add(4);
+                                    Cycles_Add(4);
                                     return JP(nn);
                                 }
                                 else {
-                                    Cycle_Add(3);
+                                    Cycles_Add(3);
                                     return (address + 3);
                                 }
                                 break;
 
                             case 4:
                                 LD_n16_n8((0xFF00 + registers.c), registers.a);
-                                Cycle_Add(2);
+                                Cycles_Add(2);
                                 return (address + 1);
                                 break;
 
                             case 5:
                                 LD_n16_n8(nn, registers.a);
-                                Cycle_Add(4);
+                                Cycles_Add(4);
                                 return (address + 3);
                                 break;
 
@@ -911,7 +909,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
 
                             case 7:
                                 LD_A_n16(nn);
-                                Cycle_Add(2);
+                                Cycles_Add(2);
                                 return (address + 3);
                                 break;
                         }
@@ -921,19 +919,19 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                     case 3:
                         switch (y) {
                             case 0:
-                                Cycle_Add(4);
+                                Cycles_Add(4);
                                 return JP(nn);
                                 break;
 
                             case 6:
                                 DI();
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
 
                             case 7:
                                 EI();
-                                Cycle_Add(1);
+                                Cycles_Add(1);
                                 return (address + 1);
                                 break;
                         }
@@ -944,11 +942,11 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                         switch (y) {
                             case 0 ... 3:
                                 if (ConditionCodeCheck(Table_cc(y))) {
-                                    Cycle_Add(6);
+                                    Cycles_Add(6);
                                     return CALL(nn);
                                 }
                                 else {
-                                    Cycle_Add(3);
+                                    Cycles_Add(3);
                                     return (address + 3);
                                 }
                                 break;
@@ -960,14 +958,14 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                         switch (q) {
                             case 0:
                                 PUSH(Registers_ReadR16(Table_rp2(p)));
-                                Cycle_Add(4);
+                                Cycles_Add(4);
                                 return (address + 1);
                                 break;
 
                             case 1:
                                 switch (p) {
                                     case 0:
-                                        Cycle_Add(6);
+                                        Cycles_Add(6);
                                         return CALL(nn);
                                         break;
                                 }
@@ -978,13 +976,13 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                     // Operate on accumulator and immediate operand
                     case 6:
                         Table_alu(y, n);
-                        Cycle_Add(2);
+                        Cycles_Add(2);
                         return (address + 2);
                     break;
 
                     // Restart
                     case 7:
-                        Cycle_Add(4);
+                        Cycles_Add(4);
                         return RST(y*8);
                     break;
                 }
@@ -995,13 +993,10 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
 }
 
 void CPU_Step() {
-    while((unwaitedCycles < CYCLES_PER_FRAME) && !halted) {
-        #ifndef NDEBUG
-        Memory_Log(memory, registers);
-        #endif
-        registers.pc = CPU_ExecuteInstruction(registers.pc);
-    }
-    unwaitedCycles -= CYCLES_PER_FRAME;
+    #ifndef NDEBUG
+    Memory_Log(memory, registers);
+    #endif
+    registers.pc = CPU_ExecuteInstruction(registers.pc);
 }
 
 void CPU_Init() {
@@ -1023,11 +1018,5 @@ void CPU_Init() {
     #endif
 }
 
-void CPU_ListInstructions() {
-    for (Uint8 instr = 0; instr < 0xFF; instr ++) {
-        memory.memory[0] = instr;
-        registers.pc = 0;
-        registers.pc = CPU_ExecuteInstruction(registers.pc);
-        SDL_Log("Instr %02X, Cycles %u, Bytes %i", instr, unwaitedCycles, registers.pc);
-    }
-}
+bool CPU_Halted() {return halted;}
+bool CPU_Stopped() {return stopped;}

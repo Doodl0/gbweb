@@ -4,22 +4,22 @@
 #include <SDL3/SDL_main.h>
 #include <input.h>
 #include <file.h>
-#include <cpu.h>
+#include <cycles.h>
 #include <ppu.h>
+#include <cpu.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 
-// Emulator Settings
-#define RESOLUTION_SCALE 4
+
 
 // Set a constant frametime for an FPS limit
 const Uint64 FPS = (1 / 59.7) * 1000000000;
 Uint64 frameStart = 1000000;
 
 static SDL_Window *window = NULL;
-static SDL_Renderer *renderer = NULL;
+extern SDL_Renderer *renderer;
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
@@ -53,9 +53,9 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // because of SDL bottlenecks, meaning this function can't run that fast.
 
     if (SDL_GetTicksNS() - frameStart > FPS) {
-        CPU_Step();
+        Cycles_Step();
 
-        Render();
+        PPU_Render(1);
 
         frameStart = SDL_GetTicksNS();
 

@@ -2,4 +2,5 @@
 
 extern Uint32 unwaitedCycles;
 
-void Cycle_Add(Uint8 amount);
+void Cycles_Add(Uint8 amount);
+void Cycles_Step();
