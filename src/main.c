@@ -55,8 +55,6 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     if (SDL_GetTicksNS() - frameStart > FPS) {
         Cycles_Step();
 
-        PPU_Render(1);
-
         frameStart = SDL_GetTicksNS();
 
         char* message = "No ROM loaded";
