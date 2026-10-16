@@ -7,6 +7,7 @@
 #include <cycles.h>
 #include <ppu.h>
 #include <cpu.h>
+#include <window.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -18,13 +19,12 @@
 const Uint64 FPS = (1 / 59.7) * 1000000000;
 Uint64 frameStart = 1000000;
 
-static SDL_Window *window = NULL;
-extern SDL_Renderer *renderer;
+
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
     // Create window and renderer
-    if (!SDL_CreateWindowAndRenderer("GBWeb", 160 * RESOLUTION_SCALE, 144 * RESOLUTION_SCALE, 0, &window, &renderer)) {
+    if (!Window_Init()) {
         SDL_Log("Couldn't create window and renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
@@ -54,26 +54,8 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
     if (SDL_GetTicksNS() - frameStart > FPS) {
         Cycles_Step();
-
+        Window_Blit();
         frameStart = SDL_GetTicksNS();
-
-        char* message = "No ROM loaded";
-        int w = 0, h = 0;
-        float x, y;
-        const float scale = 4.0f;
-
-        /* Center the message and scale it up */
-        SDL_GetCurrentRenderOutputSize(renderer, &w, &h);
-        SDL_SetRenderScale(renderer, scale, scale);
-        x = ((w / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE * SDL_strlen(message)) / 2;
-        y = ((h / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) / 2;
-
-        /* Draw the message */
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderDebugText(renderer, x, y, message);
-        SDL_RenderPresent(renderer);
     }
     return SDL_APP_CONTINUE;
 }

@@ -22,6 +22,7 @@ set(SOURCE_FILES
   src/memory.c
   src/cycles.c
   src/ppu.c
+  src/window.c
 )
 
 include_directories(include)

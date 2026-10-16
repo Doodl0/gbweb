@@ -117,7 +117,7 @@ Uint16 Registers_ReadR16(r16Enum r) {
 void Memory_Write(Uint16 address, Uint8 value) {
     // If in VRAM, set and also update tileset
     if((address >= 0x8000) && (address <= 0x9FFF)) {
-        memory.VRAM[address - 0x8000] = value;
+        memory.VRAM[address& 0x1FFF] = value;
         if(address <= 0x97ff) PPU_UpdateTile(address);
     }
     else {
