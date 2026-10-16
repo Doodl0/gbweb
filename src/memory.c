@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <SDL3/SDL_log.h>
 #include <memory.h>
+#include <ppu.h>
 
 memoryBus memory;
 Uint8 ime = 0;
@@ -114,11 +115,22 @@ Uint16 Registers_ReadR16(r16Enum r) {
 }
 
 void Memory_Write(Uint16 address, Uint8 value) {
-    memory.memory[address] = value;
+    // If in VRAM, set and also update tileset
+    if((address >= 0x8000) && (address <= 0x9FFF)) {
+        memory.VRAM[address - 0x8000] = value;
+        if(address <= 0x97ff) PPU_UpdateTile(address);
+    }
+    else {
+        memory.memory[address] = value;
+    }
 }
 
-Uint16 Memory_Read(Uint16 address) {
+Uint8 Memory_Read(Uint16 address) {
     return memory.memory[address];
+}
+
+Uint8 Memory_ReadVRAM(Uint16 address) {
+    return memory.VRAM[address];
 }
 
 void Memory_Set(Uint8* buffer, Uint32 size) {

@@ -34,7 +34,9 @@ Uint16 Registers_ReadR16(r16Enum r);
 
 void Memory_Write(Uint16 address, Uint8 value);
 
-Uint16 Memory_Read(Uint16 address);
+Uint8 Memory_Read(Uint16 address);
+
+Uint8 Memory_ReadVRAM(Uint16 address);
 
 void Memory_Set(Uint8* buffer, Uint32 size);
 

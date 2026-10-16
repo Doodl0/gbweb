@@ -8,19 +8,19 @@
 #include <main.h>
 #include <cycles.h>
 
+#define TILE_VALUE_ZERO 255,255,255,255
+#define TILE_VALUE_ONE 192,192,192,255
+#define TILE_VALUE_TWO 96,96,96,255
+#define TILE_VALUE_THREE 0,0,0,255
+
 #define VRAM_BEGIN 0x8000
 #define VRAM_END 0x9FFF
 
-const unsigned short VRAMSize = (VRAM_END - VRAM_BEGIN + 1);
+const Uint16 VRAM_SIZE = (VRAM_END - VRAM_BEGIN + 1);
+#define TILES_AMOUNT 384
 
-#define TILE_VALUE_ZERO
-#define TILE_VALUE_ONE
-#define TILE_VALUE_TWO
-#define TILE_VALUE_THREE
-
-extern SDL_Renderer *renderer;
-
-typedef Uint8 tile[8][8];
+// Tileset
+Uint8 tileset[TILES_AMOUNT][8][8];
 
 typedef enum PPUMode {
     HBLANK,
@@ -37,7 +37,30 @@ static Uint32 dots = 0;
 // Current line to be rendered
 static Uint8 line = 0;
 
+
+
 //SDL_Texture* framebuffer = SDL_CreateTexture(*renderer, SDL_PIXELFORMAT_RGBA4444, SDL_TEXTUREACCESS_TARGET, 160 * RESOLUTION_SCALE, 144 * RESOLUTION_SCALE);
+
+// Take values from
+void PPU_UpdateTile(Uint16 address) {
+    // Get base address for tile
+    address &= 0x1FFE;
+
+    // Find the row and tile that was updated
+    Uint16 tile = (address >> 4) & 511;
+    Uint16 y = (address >> 1) & 7;
+    Uint8 sx;
+
+    for (Uint8 x = 0; x < 8; x++) {
+        // Find bit index for the pixel
+        sx  = 1 << (7-x);
+
+        // Update tileset
+        tileset[tile][y][x] = ((Memory_ReadVRAM(address) & sx) ? 1 : 0) +
+	        ((Memory_ReadVRAM(address + 1) & sx) ? 2 : 0);
+
+    }
+}
 
 void PPU_DrawPixel() {
 
