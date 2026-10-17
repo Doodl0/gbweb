@@ -11,7 +11,6 @@
 #define LCD_CONTROL_BGTILEMAP (1 << 3)
 #define LCD_CONTROL_TILESET (1 << 4)
 
-
 #define TILE_VALUE_ZERO {255,255,255,255}
 #define TILE_VALUE_ONE {192,192,192,255}
 #define TILE_VALUE_TWO {96,96,96,255}
@@ -35,17 +34,11 @@ typedef enum PPUMode {
 
 static PPUMode mode = HBLANK;
 
-
-
 // Dots are just the amount of T-cycles that the PPU need to run through
 static Uint32 dots = 0;
 
 // Current line to be rendered
 static Uint8 line = 0;
-
-
-
-//SDL_Texture* framebuffer = SDL_CreateTexture(*renderer, SDL_PIXELFORMAT_RGBA4444, SDL_TEXTUREACCESS_TARGET, 160 * RESOLUTION_SCALE, 144 * RESOLUTION_SCALE);
 
 // References for graphics: https://imrannazar.com/series/gameboy-emulation-in-javascript/graphics
 
@@ -118,16 +111,10 @@ void PPU_DrawLine() {
     for(Uint8 i = 0; i < 160; i++) {
         // Map tile data to colour through palette
         int tiledata = tileset[tile][y][x];
-        pixelColour colour0 = PPU_GetBGColour(tiledata & 0b00000011);
-        pixelColour colour1 = PPU_GetBGColour((tiledata & 0b00001100) >> 2);
-        pixelColour colour2 = PPU_GetBGColour((tiledata & 0b00110000) >> 4);
-        pixelColour colour3 = PPU_GetBGColour((tiledata & 0b11000000) >> 6);
+        pixelColour colour0 = PPU_GetBGColour(tiledata);
 
         // Draw pixel to framebuffer
         Window_DrawPixel(canvasOffset, colour0);
-        //Window_DrawPixel(canvasOffset + 1, colour1);
-        //Window_DrawPixel(canvasOffset + 2, colour2);
-        //Window_DrawPixel(canvasOffset + 3, colour3);
         canvasOffset += 1;
         // When tile ends, read another
         x++;
@@ -176,7 +163,7 @@ void PPU_Step() {
                 dots = 0;
                 line++;
 
-                if (line == 143) {
+                if (line == 144) {
                     // Enter VBLANK
                     mode = VBLANK;
                     // TODO: push image to screen
