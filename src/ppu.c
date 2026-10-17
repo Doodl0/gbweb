@@ -42,6 +42,14 @@ static Uint8 line = 0;
 
 // References for graphics: https://imrannazar.com/series/gameboy-emulation-in-javascript/graphics
 
+static Uint8 PPU_ScrollX() {
+    return Memory_Read(0xFF43);
+}
+
+static Uint8 PPU_ScrollY() {
+    return Memory_Read(0xFF42);
+}
+
 // Take values from
 void PPU_UpdateTile(Uint16 address) {
     // Get base address for tile

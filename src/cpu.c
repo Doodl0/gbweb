@@ -320,7 +320,9 @@ static void OR(Uint8 value) {
 }
 
 static void POP(r16Enum r) {
-    Registers_WriteR16(r, Memory_Read(registers.sp) | (Memory_Read(registers.sp + 1) << 8));
+    // If AF, only write bits 7 to 4 into F
+    if (r == AF) Registers_WriteR16(r, (Memory_Read(registers.sp) & 0xF0) | ((Memory_Read(registers.sp + 1) << 8)));
+    else Registers_WriteR16(r, Memory_Read(registers.sp) | (Memory_Read(registers.sp + 1) << 8));
     registers.sp += 2;
 }
 
