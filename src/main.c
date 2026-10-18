@@ -11,15 +11,16 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#define EMSCRIPTEN_FULLSCREEN_SCALE_ASPECT 1
 #endif
 
-
+bool ROMLoaded = false;
 
 // Set a constant frametime for an FPS limit
 const Uint64 FPS = (1 / 59.7) * 1000000000;
 Uint64 frameStart = 1000000;
 
-
+void Main_SetROMLoaded() {ROMLoaded = true;}
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
@@ -28,8 +29,6 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         SDL_Log("Couldn't create window and renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
-    File_OpenDialog();
-    CPU_Init();
 
     return SDL_APP_CONTINUE;
 }
@@ -53,8 +52,15 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // because of SDL bottlenecks, meaning this function can't run that fast.
 
     if (SDL_GetTicksNS() - frameStart > FPS) {
-        Cycles_Step();
-        Window_Blit();
+
+        if (ROMLoaded) {
+            Cycles_Step();
+            Window_Blit();
+        }
+        else {
+            Window_NoROM();
+        }
+
         frameStart = SDL_GetTicksNS();
     }
     return SDL_APP_CONTINUE;

@@ -9,5 +9,6 @@ typedef struct colour {
 } pixelColour;
 
 bool Window_Init();
+void Window_NoROM();
 void Window_DrawPixel(int pixelOffset, pixelColour colour);
 void Window_Blit();

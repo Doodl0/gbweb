@@ -34,7 +34,7 @@ set_property(TARGET gbweb PROPERTY C_STANDARD 11)
 # on Web targets, we need CMake to generate a HTML webpage.
 if(EMSCRIPTEN)
   #set(CMAKE_EXECUTABLE_SUFFIX ".html" CACHE INTERNAL "")
-  target_link_options(gbweb PRIVATE -sEXPORTED_RUNTIME_METHODS=[ccall,HEAPU8])
+  target_link_options(gbweb PRIVATE -sEXPORTED_RUNTIME_METHODS=[ccall,HEAPU8,requestFullscreen])
   target_link_options(gbweb PRIVATE -sEXPORTED_FUNCTIONS=[_main,_malloc,_free])
   target_link_options(gbweb PRIVATE -sSTACK_SIZE=1048576)
 endif()

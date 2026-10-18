@@ -8,6 +8,8 @@
 #endif
 
 #include <memory.h>
+#include <cpu.h>
+#include <main.h>
 
 // Based on stackoverflow.com/questions/69935188/open-a-file-in-emscripten-using-browser-file-selector-dialogue
 // and github.com/Armchair-Software/emscripten-browser-file
@@ -20,6 +22,10 @@ EMSCRIPTEN_KEEPALIVE int LoadFile(const Uint8 *buffer, size_t size) {
 
   // do whatever you need with the file contents
   Memory_Set((Uint8 *) buffer, size);
+
+  CPU_Init();
+  Main_SetROMLoaded();
+
   return 0;
 }
 
@@ -36,6 +42,9 @@ void LoadFile(char* filename) {
 
     Memory_Set(ptr,0x8000);
     fclose(file);
+
+    CPU_Init();
+    Main_SetROMLoaded();
 }
 
 #endif
