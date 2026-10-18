@@ -8,14 +8,6 @@
 #include <cycles.h>
 #include <window.h>
 
-#define LCD_CONTROL_BGTILEMAP (1 << 3)
-#define LCD_CONTROL_TILESET (1 << 4)
-
-#define TILE_VALUE_ZERO {255,255,255,255}
-#define TILE_VALUE_ONE {192,192,192,255}
-#define TILE_VALUE_TWO {96,96,96,255}
-#define TILE_VALUE_THREE {0,0,0,255}
-
 #define VRAM_BEGIN 0x8000
 #define VRAM_END 0x9FFF
 
@@ -40,13 +32,30 @@ static Uint32 dots = 0;
 // Current line to be rendered
 static Uint8 line = 0;
 
+Uint8 PPU_Line() {
+    return line;
+}
+
 // References for graphics: https://imrannazar.com/series/gameboy-emulation-in-javascript/graphics
 
-static Uint8 PPU_ScrollX() {
+#define LCD_CONTROL_BACKGROUND (1)
+#define LCD_CONTROL_SPRITES (1 << 1)
+#define LCD_CONTROL_SPRITESSIZE (1 << 2)
+#define LCD_CONTROL_BGTILEMAP (1 << 3)
+#define LCD_CONTROL_BGTILESET (1 << 4)
+#define LCD_CONTROL_WINDOW (1 << 5)
+#define LCD_CONTROL_WINDOWTILEMAP (1 << 6)
+#define LCD_CONTROL_DISPLAY (1 << 7)
+
+static Uint8 PPU_Register_LCD_Control(Uint8 bit) {
+    return (Memory_Read(0xFF40) & bit) ? 1 : 0;
+}
+
+static Uint8 PPU_Register_ScrollX() {
     return Memory_Read(0xFF43);
 }
 
-static Uint8 PPU_ScrollY() {
+static Uint8 PPU_Register_ScrollY() {
     return Memory_Read(0xFF42);
 }
 
@@ -71,6 +80,10 @@ void PPU_UpdateTile(Uint16 address) {
     }
 }
 
+#define TILE_VALUE_ZERO {255,255,255,255}
+#define TILE_VALUE_ONE {192,192,192,255}
+#define TILE_VALUE_TWO {96,96,96,255}
+#define TILE_VALUE_THREE {0,0,0,255}
 // Get a 2 bit number and return the corresponding RGBA colour
 pixelColour PPU_GetBGColour(Uint8 pixel) {
     switch (pixel) {
@@ -84,13 +97,13 @@ pixelColour PPU_GetBGColour(Uint8 pixel) {
 
 void PPU_DrawLine() {
     // Get scrollY register from memory
-    Uint8 scy = Memory_Read(0xFF42);
+    Uint8 scy = PPU_Register_ScrollY();
     // Get scrollX register from memory
-    Uint8 scx = Memory_Read(0xFF43);
+    Uint8 scx = PPU_Register_ScrollX();
 
     // VRAM offset for tilemap
     // Check memory for LCD control register and get background tilemap flag
-    Uint16 mapOffset = (Memory_Read(0xFF40) & LCD_CONTROL_BGTILEMAP) ? 0x1C00 : 0x1800;
+    Uint16 mapOffset = PPU_Register_LCD_Control(LCD_CONTROL_BGTILEMAP) ? 0x1C00 : 0x1800;
 
     // Which lines of tiles to use in the map
     mapOffset += (((line + scy) & 255) >> 3) << 5;
@@ -113,8 +126,8 @@ void PPU_DrawLine() {
     // Read tileset flag
     // If the tile data set in use is #1, the
 	// indices are signed; calculate a real tile offset
-    Uint8 bgtile = (Memory_Read(0xFF40) & LCD_CONTROL_TILESET);
-    if ((bgtile == 1) && (tile < 128)) tile += 256;
+    Uint8 bgtile = PPU_Register_LCD_Control(LCD_CONTROL_BGTILESET);
+    if ((bgtile != 1) && (tile < 128)) tile += 256;
 
     for(Uint8 i = 0; i < 160; i++) {
         // Map tile data to colour through palette
@@ -130,7 +143,7 @@ void PPU_DrawLine() {
 			x = 0;
 			lineOffset = (lineOffset + 1) & 31;
 			tile = Memory_ReadVRAM(mapOffset + lineOffset);
-			if ((bgtile == 1) && (tile < 128)) tile += 256;
+			if ((bgtile != 1) && (tile < 128)) tile += 256;
 		}
 
     }
@@ -138,7 +151,6 @@ void PPU_DrawLine() {
 
 void PPU_Step() {
     // Reference : https://imrannazar.com/series/gameboy-emulation-in-javascript/gpu-timing
-
     dots += Cycles_Get();
 
     switch(mode) {
@@ -146,7 +158,7 @@ void PPU_Step() {
         case OAM:
             if (dots >= 80) {
                 // Enter VRAM read / draw mode (mode 3)
-                dots = 0;
+                dots -= 80;
                 mode = DRAW;
             }
             break;
@@ -156,7 +168,7 @@ void PPU_Step() {
         case DRAW:
             if (dots >= 172) {
                 // Enter HBLANK
-                dots = 0;
+                dots -= 172;
                 mode = HBLANK;
 
                 // Write a scanline to the framebuffer
@@ -168,13 +180,14 @@ void PPU_Step() {
         // After last HBLANK, push framebuffer to screen
         case HBLANK:
             if (dots >= 204) {
-                dots = 0;
+                dots -= 204;
                 line++;
 
                 if (line == 144) {
                     // Enter VBLANK
                     mode = VBLANK;
-                    // TODO: push image to screen
+                    // Push image to screen
+                    Window_Blit();
                 }
                 else mode = OAM;
             }
@@ -183,13 +196,13 @@ void PPU_Step() {
         // VBLANK (10 lines)
         case VBLANK:
             if (dots >= 456) {
-                dots = 0;
+                dots -= 456;
                 line++;
 
-                if (line > 153) {
+                if (line == 154) {
                     // Restart scanning modes
                     mode = OAM;
-                    line = 0;
+                    line -= 154;
                 }
             }
             break;

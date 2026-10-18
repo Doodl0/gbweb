@@ -64,3 +64,7 @@ typedef enum flags {
 void Registers_SetFlag(enum flags flag, Uint8 value);
 
 Uint8 Registers_GetFlag(enum flags flag);
+
+Uint16 Registers_ReadR16(r16Enum r);
+
+void Registers_WriteR16(r16Enum target, Uint16 value);

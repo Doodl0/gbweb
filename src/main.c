@@ -55,7 +55,6 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 
         if (ROMLoaded) {
             Cycles_Step();
-            Window_Blit();
         }
         else {
             Window_NoROM();

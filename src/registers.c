@@ -63,3 +63,49 @@ Uint8 Registers_GetFlag(enum flags flag) {
     }
     return bit;
 }
+
+Uint16 Registers_ReadR16(r16Enum r) {
+    switch (r) {
+        case BC:
+            return registers.bc;
+            break;
+        case DE:
+            return registers.de;
+            break;
+        case HL:
+            return registers.hl;
+            break;
+        case SP:
+            return registers.sp;
+            break;
+        case AF:
+            return registers.af;
+            break;
+        case PC:
+            return registers.pc;
+            break;
+    }
+}
+
+void Registers_WriteR16(r16Enum target, Uint16 value) {
+    switch (target) {
+        case BC:
+            registers.bc = value;
+            break;
+        case DE:
+            registers.de = value;
+            break;
+        case HL:
+            registers.hl = value;
+            break;
+        case SP:
+            registers.sp = value;
+            break;
+        case AF:
+            registers.af = value;
+            break;
+        case PC:
+            registers.pc = value;
+            break;
+    }
+}
