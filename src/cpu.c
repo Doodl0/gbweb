@@ -1218,8 +1218,6 @@ void CPU_Init() {
     registers.sp = 0xFFFE;
     registers.pc = 0x0100;
 
-    memory.memory[0xFF44] = 0x90;
-
     #ifndef NDEBUG
     Memory_LogInit();
     #endif

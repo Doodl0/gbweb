@@ -79,8 +79,10 @@ void Memory_Write(Uint16 address, Uint8 value) {
 }
 
 Uint8 Memory_Read(Uint16 address) {
-    // Read only PPU current scanline register (hardcoded because i can't be bothered to fix it rn)
-    if (address == 0xFF44) return 0x90;
+    // Read only PPU current scanline register
+    if (address == 0xFF44) return PPU_Line();
+    // Hardcoded inputs because not implemented yet
+    if (address == 0xFF00) return 0xFF;
 
     return memory.memory[address];
 }

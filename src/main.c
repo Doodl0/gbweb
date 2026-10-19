@@ -46,13 +46,12 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 // Per frame iteration
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
-    // Only render 5.97 times per second
+    // Only render 59.7 times per second
     // Each frame runs the cpu for the amount of time that the CPU would use during a frame, and then renders
     // This is a lot more efficient that using the CPU as many times per second and then rendering at 60FPS
     // because of SDL bottlenecks, meaning this function can't run that fast.
 
-    if (SDL_GetTicksNS() - frameStart > FPS) {
-
+    if ((SDL_GetTicksNS() - frameStart) > FPS)  {
         if (ROMLoaded) {
             Cycles_Step();
         }
