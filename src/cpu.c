@@ -189,6 +189,21 @@ static void ADD_A(Uint8 value) {
     Registers_SetFlag(SUBTRACT, 0);
 }
 
+static void ADD_SP(Sint8 value) {
+    // Check if overflown from bit 3
+    if ((registers.sp & 0xF) + (value & 0xF) > 0xF) Registers_SetFlag(HALF_CARRY, 1);
+    else Registers_SetFlag(HALF_CARRY, 0);
+
+    // Check if overflown from bit 7
+    if ((registers.sp & 0xFF) + (value & 0xFF) > 0xFF) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    Registers_SetFlag(ZERO, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    registers.sp += value;
+}
+
 static void AND(Uint8 value) {
     // Bitwise AND of A and value
     registers.a = registers.a & value;
@@ -325,6 +340,21 @@ static void LD_r16_n16(r16Enum r16, Uint16 value) {
 static void LD_n16_n16(Uint16 address, Uint16 value) {
     Memory_Write(address, (Uint8)(registers.sp & 0xFF));
     Memory_Write(address + 1, (Uint8)(registers.sp >> 8));
+}
+
+static void LD_HL_SPd(Sint8 value) {
+    // Check if overflown from bit 3
+    if ((registers.sp & 0xF) + (value & 0xF) > 0xF) Registers_SetFlag(HALF_CARRY, 1);
+    else Registers_SetFlag(HALF_CARRY, 0);
+
+    // Check if overflown from bit 7
+    if ((registers.sp & 0xFF) + (value & 0xFF) > 0xFF) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    Registers_SetFlag(ZERO, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    registers.hl = registers.sp + value;
 }
 
 static void NOP() {}
@@ -963,7 +993,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 break;
 
                             case 5:
-                                CPU_MissingInstruction("ADD SP, d");
+                                ADD_SP((Sint8) n);
                                 Cycles_AddM(4);
                                 return (address + 2);
                                 break;
@@ -975,7 +1005,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 break;
 
                             case 7:
-                                CPU_MissingInstruction("LD HL, SP+ d");
+                                LD_HL_SPd((Sint8) n);
                                 Cycles_AddM(3);
                                 return (address + 2);
                                 break;
