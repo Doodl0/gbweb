@@ -201,6 +201,15 @@ static void AND(Uint8 value) {
     Registers_SetFlag(SUBTRACT, 0);
 }
 
+static void BIT(Uint8 u3, r8Enum r) {
+    Uint8 bit = 1 << u3;
+    if(bit & Registers_ReadR8(r)) Registers_SetFlag(ZERO, 0);
+    else Registers_SetFlag(ZERO, 1);
+
+    Registers_SetFlag(HALF_CARRY, 1);
+    Registers_SetFlag(SUBTRACT, 0);
+}
+
 static void CCF() {
     // Complement carry flag
     if (Registers_GetFlag(CARRY)) Registers_SetFlag(CARRY, 0);
@@ -353,6 +362,12 @@ static Uint16 CALL(Uint16 value) {
     return JP(value);
 }
 
+static void RES(Uint8 u3, r8Enum r) {
+    Uint8 bit = ~(1 << u3);
+    Uint8 value = Registers_ReadR8(r);
+    Registers_WriteR8(r, value & bit);
+}
+
 static Uint16 RET() {
     Uint16 value = Memory_Read(registers.sp) |  (Memory_Read(registers.sp + 1) << 8);
     registers.sp += 2;
@@ -367,113 +382,6 @@ static Uint16 RETI() {
 static Uint16 RST(Uint8 vec) {
     PUSH(registers.pc + 1);
     return JP((Uint16)vec);
-}
-
-static void SBC_A(Uint8 value) {
-    Uint8 carry = Registers_GetFlag(CARRY);
-
-    // Check if overflown from bit 3
-    if ((((value) & 0x0F) + carry) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
-    else Registers_SetFlag(HALF_CARRY, 0);
-
-    // Check if overflown from bit 7
-    if ((value + carry) > (registers.a)) Registers_SetFlag(CARRY, 1);
-    else Registers_SetFlag(CARRY, 0);
-
-    // Subtract carry flag and the input value from register A
-    registers.a = registers.a - value - carry;
-
-    // Check if 0
-    if (registers.a == 0) Registers_SetFlag(ZERO, 1);
-    else Registers_SetFlag(ZERO, 0);
-    // Is a subtract so set to true
-    Registers_SetFlag(SUBTRACT, 1);
-}
-
-static void SCF() {
-    // Set carry flag
-    Registers_SetFlag(CARRY, 1);
-    Registers_SetFlag(HALF_CARRY, 0);
-    Registers_SetFlag(SUBTRACT, 0);
-}
-
-static Uint8 SLA(Uint8 value) {
-    if(value & 0x80) Registers_SetFlag(CARRY, 1);
-    else Registers_SetFlag(CARRY, 0);
-
-    value <<= 1;
-
-    if(value == 0) Registers_SetFlag(ZERO, 1);
-    else Registers_SetFlag(ZERO, 0);
-
-    Registers_SetFlag(HALF_CARRY, 0);
-    Registers_SetFlag(SUBTRACT, 0);
-
-    return value;
-}
-
-static void SUB(Uint8 value) {
-    // Check if overflown from bit 7
-    if (value > registers.a) Registers_SetFlag(CARRY, 1);
-    else Registers_SetFlag(CARRY, 0);
-
-    // Check if overflown from bit 3
-    if ((value & 0x0F) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
-    else Registers_SetFlag(HALF_CARRY, 0);
-
-    registers.a = registers.a - value;
-
-    // Check if 0
-    if (registers.a  == 0) Registers_SetFlag(ZERO, 1);
-    else Registers_SetFlag(ZERO, 0);
-    // Is a subtract so set to true
-    Registers_SetFlag(SUBTRACT, 1);
-}
-
-static Uint8 SRA(Uint8 value) {
-    // Bit 7 is unchanged
-    Uint8 bit7 = value & 0x80;
-
-    if(value & 0x01) Registers_SetFlag(CARRY, 1);
-    else Registers_SetFlag(CARRY, 0);
-
-    value >>= 1;
-    value |= bit7;
-
-    if(value == 0) Registers_SetFlag(ZERO, 1);
-    else Registers_SetFlag(ZERO, 0);
-
-    Registers_SetFlag(HALF_CARRY, 0);
-    Registers_SetFlag(SUBTRACT, 0);
-
-    return value;
-}
-
-static Uint8 SRL(Uint8 value) {
-    if(value & 0x01) Registers_SetFlag(CARRY, 1);
-    else Registers_SetFlag(CARRY, 0);
-
-    value >>= 1;
-
-    if(value == 0) Registers_SetFlag(ZERO, 1);
-    else Registers_SetFlag(ZERO, 0);
-
-    Registers_SetFlag(HALF_CARRY, 0);
-    Registers_SetFlag(SUBTRACT, 0);
-
-    return value;
-}
-
-static Uint8 SWAP(Uint8 value) {
-    value = ((value & 0xF) << 4) | ((value & 0xF0) >> 4);
-
-    if(value == 0) Registers_SetFlag(ZERO, 1);
-    else Registers_SetFlag(ZERO, 0);
-    Registers_SetFlag(CARRY, 0);
-    Registers_SetFlag(HALF_CARRY, 0);
-    Registers_SetFlag(SUBTRACT, 0);
-
-    return value;
 }
 
 static Uint8 RL(Uint8 value) {
@@ -556,6 +464,119 @@ static void RRCA() {
     registers.a = RRC(registers.a);
 
     Registers_SetFlag(ZERO, 0);
+}
+
+static void SBC_A(Uint8 value) {
+    Uint8 carry = Registers_GetFlag(CARRY);
+
+    // Check if overflown from bit 3
+    if ((((value) & 0x0F) + carry) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
+    else Registers_SetFlag(HALF_CARRY, 0);
+
+    // Check if overflown from bit 7
+    if ((value + carry) > (registers.a)) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    // Subtract carry flag and the input value from register A
+    registers.a = registers.a - value - carry;
+
+    // Check if 0
+    if (registers.a == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+    // Is a subtract so set to true
+    Registers_SetFlag(SUBTRACT, 1);
+}
+
+static void SCF() {
+    // Set carry flag
+    Registers_SetFlag(CARRY, 1);
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+}
+
+static void SET(Uint8 u3, r8Enum r) {
+    Uint8 bit = (1 << u3);
+    Uint8 value = Registers_ReadR8(r);
+    Registers_WriteR8(r, value | bit);
+}
+
+static Uint8 SLA(Uint8 value) {
+    if(value & 0x80) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    value <<= 1;
+
+    if(value == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return value;
+}
+
+static void SUB(Uint8 value) {
+    // Check if overflown from bit 7
+    if (value > registers.a) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    // Check if overflown from bit 3
+    if ((value & 0x0F) > (registers.a & 0x0F)) Registers_SetFlag(HALF_CARRY, 1);
+    else Registers_SetFlag(HALF_CARRY, 0);
+
+    registers.a = registers.a - value;
+
+    // Check if 0
+    if (registers.a  == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+    // Is a subtract so set to true
+    Registers_SetFlag(SUBTRACT, 1);
+}
+
+static Uint8 SRA(Uint8 value) {
+    // Bit 7 is unchanged
+    Uint8 bit7 = value & 0x80;
+
+    if(value & 0x01) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    value >>= 1;
+    value |= bit7;
+
+    if(value == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return value;
+}
+
+static Uint8 SRL(Uint8 value) {
+    if(value & 0x01) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    value >>= 1;
+
+    if(value == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return value;
+}
+
+static Uint8 SWAP(Uint8 value) {
+    value = ((value & 0xF) << 4) | ((value & 0xF0) >> 4);
+
+    if(value == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+    Registers_SetFlag(CARRY, 0);
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return value;
 }
 
 static void XOR(Uint8 value) {
@@ -664,21 +685,21 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
 
             // Test bit
             case 1:
-                CPU_MissingInstruction("BIT y, r[z]");
+                BIT(y, Table_r(z));
                 if (Table_r(z) == HL8) Cycles_AddM(3);
                 else Cycles_AddM(2);
                 break;
 
             // Reset bit
             case 2:
-                CPU_MissingInstruction("RES y, r[z]");
+                RES(y, Table_r(z));
                 if (Table_r(z) == HL8) Cycles_AddM(4);
                 else Cycles_AddM(2);
                 break;
 
             // Set bit
             case 3:
-                CPU_MissingInstruction("SET y, r[z]");
+                SET(y, Table_r(z));
                 if (Table_r(z) == HL8) Cycles_AddM(4);
                 else Cycles_AddM(2);
                 break;
