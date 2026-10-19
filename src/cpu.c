@@ -257,6 +257,41 @@ static void CPL() {
     Registers_SetFlag(HALF_CARRY, 1);
 }
 
+static void DAA() {
+    // Reference: https://blog.ollien.com/posts/gb-daa/ and https://rgbds.gbdev.io/docs/v1.0.4/gbz80.7#DAA
+
+    Uint8 result = registers.a;
+    Uint8 adjustment = 0;
+    // Are subtracting
+    if (Registers_GetFlag(SUBTRACT)) {
+        // If there was a half carry, we will subtract 0x06
+        if (Registers_GetFlag(HALF_CARRY)) adjustment += 0x06;
+        // If there was a full carry, we will subtract 0x60
+        if (Registers_GetFlag(CARRY)) adjustment += 0x60;
+
+        result -= adjustment;
+    }
+    // Are not subtracting
+    else {
+        // If there was a half carry, we will add 0x06
+        if (Registers_GetFlag(HALF_CARRY) || ((result & 0xF) > 9)) adjustment += 0x06;
+        // If there was a full carry, we will add 0x60 and set carry flag
+        if (Registers_GetFlag(CARRY) || (result > 0x99)) {
+             adjustment += 0x60;
+             Registers_SetFlag(CARRY, 1);
+        }
+
+        result += adjustment;
+    }
+
+    if (result) Registers_SetFlag(ZERO, 0);
+    else Registers_SetFlag(ZERO, 1);
+
+    Registers_SetFlag(HALF_CARRY, 0);
+
+    registers.a = result;
+}
+
 static void DEC_r8(r8Enum target) {
     Uint8 value = Registers_ReadR8(target) - 1;
     Registers_WriteR8(target, value);
@@ -919,7 +954,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 return (address + 1);
                                 break;
                             case 4:
-                                CPU_MissingInstruction("DAA");
+                                DAA();
                                 Cycles_AddM(1);
                                 return (address + 1);
                                 break;
