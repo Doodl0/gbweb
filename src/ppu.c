@@ -24,13 +24,13 @@ typedef enum PPUMode {
     DRAW
 } PPUMode;
 
-static PPUMode mode = HBLANK;
+static PPUMode mode = OAM;
 
 // Dots are just the amount of T-cycles that the PPU need to run through
 static Uint32 dots = 0;
 
 // Current line to be rendered
-static Uint8 line = 0;
+Uint8 line = 0;
 
 Uint8 PPU_Line() {
     return line;
@@ -145,7 +145,6 @@ void PPU_DrawLine() {
 			tile = Memory_ReadVRAM(mapOffset + lineOffset);
 			if ((bgtile != 1) && (tile < 128)) tile += 256;
 		}
-
     }
 }
 
@@ -180,30 +179,27 @@ void PPU_Step() {
         // After last HBLANK, push framebuffer to screen
         case HBLANK:
             if (dots >= 204) {
-                dots -= 204;
-                line++;
-
-                if (line == 144) {
+                if (line == 143) {
                     // Enter VBLANK
                     mode = VBLANK;
-                    // Push image to screen
-                    Window_Blit();
                 }
                 else mode = OAM;
+                line++;
+                dots -= 204;
             }
             break;
 
         // VBLANK (10 lines)
         case VBLANK:
             if (dots >= 456) {
-                dots -= 456;
                 line++;
-
-                if (line == 154) {
+                if (line == 153) {
                     // Restart scanning modes
                     mode = OAM;
-                    line -= 154;
+                    line = 0;
                 }
+
+                dots -= 456;
             }
             break;
     }

@@ -201,6 +201,14 @@ static void AND(Uint8 value) {
     Registers_SetFlag(SUBTRACT, 0);
 }
 
+static void CCF() {
+    // Complement carry flag
+    if (Registers_GetFlag(CARRY)) Registers_SetFlag(CARRY, 0);
+    else Registers_SetFlag(CARRY, 1);
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+}
+
 static void CP(Uint8 value) {
     // Compare and set flags
 
@@ -215,6 +223,14 @@ static void CP(Uint8 value) {
     else Registers_SetFlag(ZERO, 0);
     // Is a subtract so set to true
     Registers_SetFlag(SUBTRACT, 1);
+}
+
+static void CPL() {
+    // Complement accumulator (Bitwise NOT)
+    registers.a = ~registers.a;
+
+    Registers_SetFlag(SUBTRACT, 1);
+    Registers_SetFlag(HALF_CARRY, 1);
 }
 
 static void DEC_r8(r8Enum target) {
@@ -374,6 +390,28 @@ static void SBC_A(Uint8 value) {
     Registers_SetFlag(SUBTRACT, 1);
 }
 
+static void SCF() {
+    // Set carry flag
+    Registers_SetFlag(CARRY, 1);
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+}
+
+static Uint8 SLA(Uint8 value) {
+    if(value & 0x80) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    value <<= 1;
+
+    if(value == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return value;
+}
+
 static void SUB(Uint8 value) {
     // Check if overflown from bit 7
     if (value > registers.a) Registers_SetFlag(CARRY, 1);
@@ -390,6 +428,25 @@ static void SUB(Uint8 value) {
     else Registers_SetFlag(ZERO, 0);
     // Is a subtract so set to true
     Registers_SetFlag(SUBTRACT, 1);
+}
+
+static Uint8 SRA(Uint8 value) {
+    // Bit 7 is unchanged
+    Uint8 bit7 = value & 0x80;
+
+    if(value & 0x01) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    value >>= 1;
+    value |= bit7;
+
+    if(value == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return value;
 }
 
 static Uint8 SRL(Uint8 value) {
@@ -419,6 +476,21 @@ static Uint8 SWAP(Uint8 value) {
     return value;
 }
 
+static Uint8 RL(Uint8 value) {
+    Uint8 newValue = (value <<  1) | Registers_GetFlag(CARRY);
+
+    if((value & 0x80)) Registers_SetFlag(CARRY, 1);
+    else Registers_SetFlag(CARRY, 0);
+
+    if(newValue == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+
+    Registers_SetFlag(HALF_CARRY, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+
+    return newValue;
+}
+
 static Uint8 RR(Uint8 value) {
     Uint8 newValue = (value >> 1) | (Registers_GetFlag(CARRY) << 7);
 
@@ -434,8 +506,55 @@ static Uint8 RR(Uint8 value) {
     return newValue;
 }
 
+static void RLA() {
+    registers.a = RL(registers.a);
+    Registers_SetFlag(ZERO, 0);
+}
+
 static void RRA() {
     registers.a = RR(registers.a);
+    Registers_SetFlag(ZERO, 0);
+}
+
+static Uint8 RLC(Uint8 value) {
+    Uint8 carry = (value & 0x80) >> 7;
+
+    value <<= 1;
+    value += carry;
+
+    Registers_SetFlag(CARRY, carry);
+    if (value) Registers_SetFlag(ZERO, 0);
+    else Registers_SetFlag(ZERO, 1);
+    Registers_SetFlag(SUBTRACT, 0);
+    Registers_SetFlag(HALF_CARRY, 0);
+
+    return value;
+}
+
+static Uint8 RRC(Uint8 value) {
+    Uint8 carry = (value & 0x01);
+
+    value >>= 1;
+    value |= carry << 7;
+
+    Registers_SetFlag(CARRY, carry);
+    if (value == 0) Registers_SetFlag(ZERO, 1);
+    else Registers_SetFlag(ZERO, 0);
+    Registers_SetFlag(SUBTRACT, 0);
+    Registers_SetFlag(HALF_CARRY, 0);
+
+    return value;
+}
+
+static void RLCA() {
+    registers.a = RLC(registers.a);
+
+    Registers_SetFlag(ZERO, 0);
+}
+
+static void RRCA() {
+    registers.a = RRC(registers.a);
+
     Registers_SetFlag(ZERO, 0);
 }
 
@@ -494,22 +613,22 @@ static void Table_rot(Uint8 index, r8Enum r) {
     Uint8 value = Registers_ReadR8(r);
     switch (index) {
         case 0:
-            CPU_MissingInstruction("RLC(value)");
+            value = RLC(value);
             break;
         case 1:
-            CPU_MissingInstruction("RRC(value)");
+            value = RRC(value);
             break;
         case 2:
-            CPU_MissingInstruction("RL(value)");
+            value = RL(value);
             break;
         case 3:
             value = RR(value);
             break;
         case 4:
-            CPU_MissingInstruction("SLA(value)");
+            value = SLA(value);
             break;
         case 5:
-            CPU_MissingInstruction("SRA(value)");
+            value = SRA(value);
             break;
         case 6:
             value = SWAP(value);
@@ -729,17 +848,17 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                     case 7:
                         switch (y) {
                             case 0:
-                                CPU_MissingInstruction("RLCA");
+                                RLCA();
                                 Cycles_AddM(1);
                                 return (address + 1);
                                 break;
                             case 1:
-                                CPU_MissingInstruction("RRCA");
+                                RRCA();
                                 Cycles_AddM(1);
                                 return (address + 1);
                                 break;
                             case 2:
-                                CPU_MissingInstruction("RLA");
+                                RLA();
                                 Cycles_AddM(1);
                                 return (address + 1);
                                 break;
@@ -754,17 +873,17 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 return (address + 1);
                                 break;
                             case 5:
-                                CPU_MissingInstruction("CPL");
+                                CPL();
                                 Cycles_AddM(1);
                                 return (address + 1);
                                 break;
                             case 6:
-                                CPU_MissingInstruction("SCF");
+                                SCF();
                                 Cycles_AddM(1);
                                 return (address + 1);
                                 break;
                             case 7:
-                                CPU_MissingInstruction("CCF");
+                                CCF();
                                 Cycles_AddM(1);
                                 return (address + 1);
                                 break;

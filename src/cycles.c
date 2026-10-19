@@ -2,6 +2,7 @@
 #include <cycles.h>
 #include <cpu.h>
 #include <ppu.h>
+#include <window.h>
 
 #define CYCLES_PER_FRAME 70224
 
@@ -40,5 +41,7 @@ void Cycles_Step() {
         PPU_Step();
         Cycles_Reset();
     }
+    // Push image to screen
+    Window_Blit();
     tcyclesFrame -= CYCLES_PER_FRAME;
 }
