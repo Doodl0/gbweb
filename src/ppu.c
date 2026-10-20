@@ -80,12 +80,57 @@ void PPU_UpdateTile(Uint16 address) {
     }
 }
 
+// Sprites
+
+typedef struct sprite {
+    Uint8 yCoord;
+    Uint8 xCoord;
+    Uint8 dataTileNumber;
+    Uint8 flags;
+} sprite;
+
+// Sprite flags
+#define SPRITE_FLAGS_PRIORITY (1<<7)
+#define SPRITE_FLAGS_YFLIP (1<<6)
+#define SPRITE_FLAGS_XFLIP (1<<5)
+#define SPRITE_FLAGS_PALETTE (1<<4)
+
+sprite PPU_Sprite_GetFromOAM(Uint8 index) {
+    Uint16 address = 0xFE00 + (index * 4);
+    return (sprite){Memory_Read(address), Memory_Read(address + 1), Memory_Read(address + 2), Memory_Read(address + 3)};
+}
+
+Uint8 PPU_Sprite_GetFlag(sprite sprite,Uint8 flag) {
+    return sprite.flags & flag;
+}
+
+// Palettes
+
 #define TILE_VALUE_ZERO {255,255,255,255}
 #define TILE_VALUE_ONE {192,192,192,255}
 #define TILE_VALUE_TWO {96,96,96,255}
 #define TILE_VALUE_THREE {0,0,0,255}
-// Get a 2 bit number and return the corresponding RGBA colour
-pixelColour PPU_GetBGColour(Uint8 pixel) {
+
+Uint8 PPU_MapPalette(Uint16 address, Uint8 pixel) {
+    // Get palette
+    Uint8 palette = Memory_Read(address);
+    // Map pixel to palette
+     return (palette >> (pixel * 2)) & 3;
+}
+
+Uint8 PPU_BackgroundPalette(Uint8 pixel) {
+    return PPU_MapPalette(0xFF47, pixel);
+}
+
+Uint8 PPU_ObjectPalette0(Uint8 pixel) {
+    return PPU_MapPalette(0xFF48, pixel);
+}
+
+Uint8 PPU_ObjectPalette1(Uint8 pixel) {
+    return PPU_MapPalette(0xFF49, pixel);
+}
+
+pixelColour PPU_ColourPixel(Uint8 pixel) {
     switch (pixel) {
         case 0: return (pixelColour)TILE_VALUE_ZERO;
         case 1: return (pixelColour)TILE_VALUE_ONE;
@@ -96,55 +141,115 @@ pixelColour PPU_GetBGColour(Uint8 pixel) {
 }
 
 void PPU_DrawLine() {
-    // Get scrollY register from memory
-    Uint8 scy = PPU_Register_ScrollY();
-    // Get scrollX register from memory
-    Uint8 scx = PPU_Register_ScrollX();
+    Uint8 scanlineRow[160];
 
-    // VRAM offset for tilemap
-    // Check memory for LCD control register and get background tilemap flag
-    Uint16 mapOffset = PPU_Register_LCD_Control(LCD_CONTROL_BGTILEMAP) ? 0x1C00 : 0x1800;
+    // Render background
+    if (PPU_Register_LCD_Control(LCD_CONTROL_BACKGROUND)) {
+        // Get scrollY register from memory
+        Uint8 scy = PPU_Register_ScrollY();
+        // Get scrollX register from memory
+        Uint8 scx = PPU_Register_ScrollX();
 
-    // Which lines of tiles to use in the map
-    mapOffset += (((line + scy) & 255) >> 3) << 5;
+        // VRAM offset for tilemap
+        // Check memory for LCD control register and get background tilemap flag
+        Uint16 mapOffset = PPU_Register_LCD_Control(LCD_CONTROL_BGTILEMAP) ? 0x1C00 : 0x1800;
 
-    // Which tile to start with in the map line
-    Uint16 lineOffset = (scx >> 3);
+        // Which lines of tiles to use in the map
+        mapOffset += (((line + scy) & 255) >> 3) << 5;
 
-    // Which line of pixels to use in the tiles
-    Uint16 y = (line + scy) & 7;
+        // Which tile to start with in the map line
+        Uint16 lineOffset = (scx >> 3);
 
-    // Where in the tileline to start
-    Uint16 x = scx & 7;
+        // Which line of pixels to use in the tiles
+        Uint16 y = (line + scy) & 7;
 
-    // Where to render on the canvas
-    Uint16 canvasOffset = line * 160;
+        // Where in the tileline to start
+        Uint16 x = scx & 7;
 
-    // Read tile index from background map
-    Uint16 tile = Memory_ReadVRAM(mapOffset + lineOffset);
+        // Where to render on the canvas
+        Uint16 canvasOffset = line * 160;
 
-    // Read tileset flag
-    // If the tile data set in use is #1, the
-	// indices are signed; calculate a real tile offset
-    Uint8 bgtile = PPU_Register_LCD_Control(LCD_CONTROL_BGTILESET);
-    if ((bgtile != 1) && (tile < 128)) tile += 256;
+        // Read tile index from background map
+        Uint16 tile = Memory_ReadVRAM(mapOffset + lineOffset);
 
-    for(Uint8 i = 0; i < 160; i++) {
-        // Map tile data to colour through palette
-        int tiledata = tileset[tile][y][x];
-        pixelColour colour0 = PPU_GetBGColour(tiledata);
+        // Read tileset flag
+        // If the tile data set in use is #1, the
+        // indices are signed; calculate a real tile offset
+        Uint8 bgtile = PPU_Register_LCD_Control(LCD_CONTROL_BGTILESET);
+        if ((bgtile != 1) && (tile < 128)) tile += 256;
 
-        // Draw pixel to framebuffer
-        Window_DrawPixel(canvasOffset, colour0);
-        canvasOffset += 1;
-        // When tile ends, read another
-        x++;
-        if(x == 8) {
-			x = 0;
-			lineOffset = (lineOffset + 1) & 31;
-			tile = Memory_ReadVRAM(mapOffset + lineOffset);
-			if ((bgtile != 1) && (tile < 128)) tile += 256;
-		}
+        for(Uint8 i = 0; i < 160; i++) {
+            // Map tile data to colour through palette
+            int tiledata = tileset[tile][y][x];
+            Uint8 pixel = PPU_BackgroundPalette(tiledata);
+
+            // Store the pixel for later checking
+            scanlineRow[i] = pixel;
+
+            // Draw pixel to framebuffer
+            Window_DrawPixel(canvasOffset, PPU_ColourPixel(pixel));
+            canvasOffset += 1;
+            // When tile ends, read another
+            x++;
+
+            if (x == 8) {
+    			x = 0;
+    			lineOffset = (lineOffset + 1) & 31;
+    			tile = Memory_ReadVRAM(mapOffset + lineOffset);
+    			if ((bgtile != 1) && (tile < 128)) tile += 256;
+            }
+        }
+    }
+
+    // Render sprites
+    if (PPU_Register_LCD_Control(LCD_CONTROL_SPRITES)) {
+        // Reference: https://imrannazar.com/series/gameboy-emulation-in-javascript/sprites
+
+        for (Uint8 i = 0; i < 1; i++) {
+            sprite object = PPU_Sprite_GetFromOAM(i);
+            SDL_Log("%u %u %u %08B", object.yCoord, object.xCoord, object.dataTileNumber, object.flags);
+            SDL_Log("%u %u %u %08B", Memory_Read(0xFE00), Memory_Read(0xFE00 + 1), Memory_Read(0xFE00 + 2), Memory_Read(0xFE00 + 3));
+            SDL_Log("%08B", tileset[3][0][4]);
+
+            // Get real onscreen coords;
+            Uint8 sx = object.xCoord - 8;
+            Uint8 sy = object.yCoord - 16;
+
+            // Check if this sprite falls on this scanline
+            if ((sy <= line) && (sy + 8) > line)  {
+
+                // Where to render this on the canvas
+                Uint16 canvasOffset = (line * 160 + sx);
+
+                // Data for this line of the sprite
+                Uint16 tileRow;
+
+                // If the sprite is Y-flipped, use the opposite side of the tile
+                if(PPU_Sprite_GetFlag(object, SPRITE_FLAGS_YFLIP)) tileRow = 7 - (line - sy);
+                else tileRow = line - sy;
+
+                for (Uint8 x = 0; x < 8; x++) {
+                    // If pixel is still on screen AND
+                    // if this sprite has priority OR shows under the background
+                    // then render the pixel
+                    if (((sx + x) >= 0) && ((sx + x) < 160)
+                        && (PPU_Sprite_GetFlag(object, SPRITE_FLAGS_PRIORITY) || ~scanlineRow[sx + x])) {
+                            // If the object is x flipped, write pixels in reverse
+                            Uint8 paletteLookup = tileset[object.dataTileNumber][tileRow][PPU_Sprite_GetFlag(object, SPRITE_FLAGS_XFLIP) ? (7 - x) : x];
+
+                            // Select right palette
+                            Uint8 pixel = PPU_Sprite_GetFlag(object, SPRITE_FLAGS_PALETTE) ?
+                                PPU_ObjectPalette1(paletteLookup) : PPU_ObjectPalette0(paletteLookup);
+
+                            // Draw pixel to framebuffer if it is not transparent
+                            if (pixel) Window_DrawPixel(canvasOffset, PPU_ColourPixel(paletteLookup));
+
+                            canvasOffset += 1;
+                        }
+                }
+
+            }
+        }
     }
 }
 
