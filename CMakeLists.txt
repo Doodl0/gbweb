@@ -23,6 +23,7 @@ set(SOURCE_FILES
   src/cycles.c
   src/ppu.c
   src/window.c
+  src/keypad.c
 )
 
 include_directories(include)

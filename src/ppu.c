@@ -182,6 +182,9 @@ void PPU_Step() {
                 if (line == 143) {
                     // Enter VBLANK
                     mode = VBLANK;
+
+                    // Push image to screen
+                    Window_Blit();
                 }
                 else mode = OAM;
                 line++;

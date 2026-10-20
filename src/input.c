@@ -1,6 +1,7 @@
 #include "SDL3/SDL_events.h"
 #include <SDL3/SDL.h>
 #include <file.h>
+#include <keypad.h>
 
 #define UP SDL_SCANCODE_W
 #define DOWN SDL_SCANCODE_S
@@ -13,21 +14,27 @@
 #define OPEN_ROM SDL_SCANCODE_TAB
 
 void Input(SDL_Event *event) {
-    if (event->key.down) {
-        if (event->key.scancode == UP) {
-            SDL_Log("Up");
-        }
-        else if (event->key.scancode == DOWN) {
-            SDL_Log("Down");
-        }
-        else if (event->key.scancode == LEFT) {
-            SDL_Log("Left");
-        }
-        else if (event->key.scancode == RIGHT) {
-            SDL_Log("Right");
-        }
-        else if (event->key.scancode == OPEN_ROM) {
-            File_OpenDialog();
-        }
+    // Key down events
+    if (event->type == SDL_EVENT_KEY_DOWN) {
+        if (event->key.scancode == UP) Keypad_KeyDown(KEY_UP);
+        else if (event->key.scancode == DOWN) Keypad_KeyDown(KEY_DOWN);
+        else if (event->key.scancode == LEFT) Keypad_KeyDown(KEY_LEFT);
+        else if (event->key.scancode == RIGHT) Keypad_KeyDown(KEY_RIGHT);
+        else if (event->key.scancode == A_BUTTON) Keypad_KeyDown(KEY_A);
+        else if (event->key.scancode == B_BUTTON) Keypad_KeyDown(KEY_B);
+        else if (event->key.scancode == SELECT) Keypad_KeyDown(KEY_SELECT);
+        else if (event->key.scancode == START) Keypad_KeyDown(KEY_START);
+        else if (event->key.scancode == OPEN_ROM) File_OpenDialog();
+    }
+    // Key up events
+    else if (event->type == SDL_EVENT_KEY_UP) {
+        if (event->key.scancode == UP) Keypad_KeyUp(KEY_UP);
+        else if (event->key.scancode == DOWN) Keypad_KeyUp(KEY_DOWN);
+        else if (event->key.scancode == LEFT) Keypad_KeyUp(KEY_LEFT);
+        else if (event->key.scancode == RIGHT) Keypad_KeyUp(KEY_RIGHT);
+        else if (event->key.scancode == A_BUTTON) Keypad_KeyUp(KEY_A);
+        else if (event->key.scancode == B_BUTTON) Keypad_KeyUp(KEY_B);
+        else if (event->key.scancode == SELECT) Keypad_KeyUp(KEY_SELECT);
+        else if (event->key.scancode == START) Keypad_KeyUp(KEY_START);
     }
 }

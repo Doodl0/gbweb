@@ -41,7 +41,6 @@ void Cycles_Step() {
         PPU_Step();
         Cycles_Reset();
     }
-    // Push image to screen
-    Window_Blit();
+
     tcyclesFrame -= CYCLES_PER_FRAME;
 }

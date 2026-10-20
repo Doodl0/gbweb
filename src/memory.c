@@ -3,6 +3,7 @@
 #include <SDL3/SDL_log.h>
 #include <memory.h>
 #include <ppu.h>
+#include <keypad.h>
 
 memoryBus memory;
 Uint8 ime = 0;
@@ -73,18 +74,17 @@ void Memory_Write(Uint16 address, Uint8 value) {
         memory.VRAM[address& 0x1FFF] = value;
         if (address <= 0x97FF) PPU_UpdateTile(address);
     }
-    else {
-        memory.memory[address] = value;
-    }
+    // Keypad I/O register
+    else if (address == 0xFF00) Keypad_Write(value);
+    else memory.memory[address] = value;
 }
 
 Uint8 Memory_Read(Uint16 address) {
     // Read only PPU current scanline register
     if (address == 0xFF44) return PPU_Line();
-    // Hardcoded inputs because not implemented yet
-    if (address == 0xFF00) return 0xFF;
-
-    return memory.memory[address];
+    // Keypad I/O register
+    else if (address == 0xFF00) return Keypad_Read();
+    else return memory.memory[address];
 }
 
 Uint8 Memory_ReadVRAM(Uint16 address) {
