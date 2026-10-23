@@ -7,15 +7,10 @@
 #include <main.h>
 #include <cycles.h>
 #include <window.h>
-
-#define VRAM_BEGIN 0x8000
-#define VRAM_END 0x9FFF
-
-const Uint16 VRAM_SIZE = (VRAM_END - VRAM_BEGIN + 1);
-#define TILES_AMOUNT 384
+#include <interrupts.h>
 
 // Tileset
-Uint8 tileset[TILES_AMOUNT][8][8];
+Uint8 tileset[384][8][8];
 
 typedef enum PPUMode {
     HBLANK,
@@ -57,6 +52,22 @@ static Uint8 PPU_Register_ScrollX() {
 
 static Uint8 PPU_Register_ScrollY() {
     return Memory_Read(0xFF42);
+}
+
+static Uint8 PPU_Register_LYCompare() {
+    return Memory_Read(0xFF45);
+}
+
+// STAT flags
+#define STAT_LYCINT (1<<6)
+#define STAT_MODE2 (1<<5)
+#define STAT_MODE1 (1<<4)
+#define STAT_MODE0 (1<<3)
+#define STAT_LYCLY (1<<2)
+#define STAT_PPUMODE (3)
+
+static Uint8 PPU_Register_STAT() {
+    return Memory_Read(0xFF41);
 }
 
 // Take values from
@@ -141,7 +152,7 @@ pixelColour PPU_ColourPixel(Uint8 pixel) {
 }
 
 void PPU_DrawLine() {
-    Uint8 scanlineRow[160];
+    Uint8 scanlineRow[160] = {};
 
     // Render background
     if (PPU_Register_LCD_Control(LCD_CONTROL_BACKGROUND)) {
@@ -200,16 +211,29 @@ void PPU_DrawLine() {
             }
         }
     }
+    else {
+        // Where to render on the canvas
+        Uint16 canvasOffset = line * 160;
+
+        for(Uint8 i = 0; i < 160; i++) {
+            // Map tile data to colour through palette
+            Uint8 pixel = PPU_BackgroundPalette(0);
+
+            // Store the pixel for later checking
+            scanlineRow[i] = pixel;
+
+            // Draw pixel to framebuffer
+            Window_DrawPixel(canvasOffset, PPU_ColourPixel(pixel));
+            canvasOffset += 1;
+        }
+    }
 
     // Render sprites
     if (PPU_Register_LCD_Control(LCD_CONTROL_SPRITES)) {
         // Reference: https://imrannazar.com/series/gameboy-emulation-in-javascript/sprites
 
-        for (Uint8 i = 0; i < 1; i++) {
+        for (Uint8 i = 0; i < 40; i++) {
             sprite object = PPU_Sprite_GetFromOAM(i);
-            SDL_Log("%u %u %u %08B", object.yCoord, object.xCoord, object.dataTileNumber, object.flags);
-            SDL_Log("%u %u %u %08B", Memory_Read(0xFE00), Memory_Read(0xFE00 + 1), Memory_Read(0xFE00 + 2), Memory_Read(0xFE00 + 3));
-            SDL_Log("%08B", tileset[3][0][4]);
 
             // Get real onscreen coords;
             Uint8 sx = object.xCoord - 8;
@@ -264,6 +288,9 @@ void PPU_Step() {
                 // Enter VRAM read / draw mode (mode 3)
                 dots -= 80;
                 mode = DRAW;
+
+            // STAT interrupt
+
             }
             break;
 
@@ -290,6 +317,9 @@ void PPU_Step() {
 
                     // Push image to screen
                     Window_Blit();
+
+                    // Send VBLANK interrupt
+                    if (Interrupts_Enabled(INTERRUPTS_VBLANK)) Interrupts_FlagSet(INTERRUPTS_VBLANK, 1);
                 }
                 else mode = OAM;
                 line++;

@@ -6,3 +6,4 @@ void Cycles_AddM(Uint8 amount);
 void Cycles_AddT(Uint8 amount);
 void Cycles_Step();
 Uint32 Cycles_Get();
+void Cycles_Reset();

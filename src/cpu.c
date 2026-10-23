@@ -4,9 +4,12 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <cycles.h>
+#include <interrupts.h>
 
 bool halted = false;
 bool stopped = false;
+
+Uint8 ime_next = 0;
 
 void CPU_Quit() {
     Memory_Deinit();
@@ -800,7 +803,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                                 return (address + 3);
                                 break;
                             case 2:
-                                CPU_MissingInstruction("STOP");
+                                //STOP;
                                 return (address + 1);
                                 break;
                             case 3:
@@ -912,21 +915,24 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                     // 8-bit INC
                     case 4:
                         INC_r8(Table_r(y));
-                        Cycles_AddM(1);
+                        if (Table_r(y) == HL8) Cycles_AddM(2);
+                        else Cycles_AddM(1);
                         return (address + 1);
                     break;
 
                     // 8-bit DEC
                     case 5:
                         DEC_r8(Table_r(y));
-                        Cycles_AddM(1);
+                        if (Table_r(y) == HL8) Cycles_AddM(2);
+                        else Cycles_AddM(1);
                         return (address + 1);
                     break;
 
                     // 8-bit load immediate
                     case 6:
                         LD_r8_n8(Table_r(y), n);
-                        Cycles_AddM(2);
+                        if (Table_r(y) == HL8) Cycles_AddM(3);
+                        else Cycles_AddM(2);
                         return (address + 2);
                     break;
 
@@ -1111,12 +1117,13 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
 
                             case 6:
                                 LD_A_n16(0xFF00 + registers.c);
+                                Cycles_AddM(2);
                                 return (address + 1);
                                 break;
 
                             case 7:
                                 LD_A_n16(nn);
-                                Cycles_AddM(2);
+                                Cycles_AddM(4);
                                 return (address + 3);
                                 break;
                         }
@@ -1199,11 +1206,31 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
     return (address + 1);
 }
 
+void CPU_HandleInterrupt() {
+    Uint8 interruptFlags = Memory_Read(0xFF0F);
+    Uint8 interruptEnable = Memory_Read(0xFFFF);
+    Uint8 interruptsFired = interruptFlags & interruptEnable;
+    if (interruptsFired & 0x01) {
+        ime = 0;
+        Interrupts_FlagSet(INTERRUPTS_VBLANK, 0);
+        registers.sp -= 2;
+        Memory_Write(registers.sp + 1, (Uint8)((registers.pc & 0xFF00) >> 8));
+        Memory_Write(registers.sp, (Uint8)((registers.pc & 0x00FF)));
+        registers.pc = 0x0040;
+        Cycles_AddM(5);
+    }
+}
+
 void CPU_Step() {
     #ifndef NDEBUG
-    Memory_Log(memory, registers);
+    //Memory_Log(memory, registers);
     #endif
+
     registers.pc = CPU_ExecuteInstruction(registers.pc);
+
+    if (ime) {
+        CPU_HandleInterrupt();
+    }
 }
 
 void CPU_Init() {
@@ -1225,3 +1252,25 @@ void CPU_Init() {
 
 bool CPU_Halted() {return halted;}
 bool CPU_Stopped() {return stopped;}
+
+// Log each instruction cycle count for debugging
+void CPU_TestInstructions() {
+    for (int i = 0; i < 256; i++) {
+        Memory_Write(0, i);
+        int bytes = CPU_ExecuteInstruction(0);
+        int cycles = Cycles_Get();
+
+        SDL_Log("Instruction %02X, %u T-cycles", i, cycles);
+        Cycles_Reset();
+    }
+
+    for (int i = 0; i < 256; i++) {
+        Memory_Write(0, 0xCB);
+        Memory_Write(1, i);
+        int bytes = CPU_ExecuteInstruction(0);
+        int cycles = Cycles_Get();
+
+        SDL_Log("Instruction CB %02X, %u T-cycles", i, cycles);
+        Cycles_Reset();
+    }
+}

@@ -36,11 +36,10 @@ void Cycles_Reset() {
 }
 
 void Cycles_Step() {
-    while((tcyclesFrame < CYCLES_PER_FRAME) && !CPU_Halted()) {
+    while((tcyclesFrame <= CYCLES_PER_FRAME)) {
         CPU_Step();
         PPU_Step();
         Cycles_Reset();
     }
-
     tcyclesFrame -= CYCLES_PER_FRAME;
 }

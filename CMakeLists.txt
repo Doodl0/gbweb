@@ -24,6 +24,7 @@ set(SOURCE_FILES
   src/ppu.c
   src/window.c
   src/keypad.c
+  src/interrupts.c
 )
 
 include_directories(include)

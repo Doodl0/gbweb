@@ -1,5 +1,6 @@
 #include <keypad.h>
 #include <SDL3/SDL_stdinc.h>
+#include <interrupts.h>
 
 Uint8 rows[2] = {0x0F, 0x0F};
 Uint8 column = 0;
@@ -24,6 +25,7 @@ void Keypad_Write(Uint8 value) {
 }
 
 void Keypad_KeyDown(Keypad_Keys key) {
+    if (Interrupts_Enabled(INTERRUPTS_JOYPADPRESS)) Interrupts_FlagSet(INTERRUPTS_JOYPADPRESS, 1);
     switch(key) {
         case KEY_UP: rows[1] &= 0xB; break;
         case KEY_DOWN: rows[1] &= 0x7; break;

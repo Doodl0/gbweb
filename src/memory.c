@@ -69,6 +69,9 @@ Uint8 Registers_ReadR8(r8Enum r) {
 }
 
 void Memory_Write(Uint16 address, Uint8 value) {
+    // Don't allow writing to cartridge
+    if ((address >= 0x0) && (address <= 0x8000)) return;
+
     // If in VRAM, set and also update tileset
     if ((address >= 0x8000) && (address <= 0x9FFF)) {
         memory.VRAM[address& 0x1FFF] = value;
