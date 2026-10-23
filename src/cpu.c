@@ -1210,14 +1210,44 @@ void CPU_HandleInterrupt() {
     Uint8 interruptFlags = Memory_Read(0xFF0F);
     Uint8 interruptEnable = Memory_Read(0xFFFF);
     Uint8 interruptsFired = interruptFlags & interruptEnable;
-    if (interruptsFired & 0x01) {
+
+    if (interruptsFired) {
         ime = 0;
-        Interrupts_FlagSet(INTERRUPTS_VBLANK, 0);
         registers.sp -= 2;
         Memory_Write(registers.sp + 1, (Uint8)((registers.pc & 0xFF00) >> 8));
         Memory_Write(registers.sp, (Uint8)((registers.pc & 0x00FF)));
-        registers.pc = 0x0040;
+
         Cycles_AddM(5);
+
+        // VBLANK
+        if (interruptsFired & 0x1) {
+            Interrupts_FlagSet(INTERRUPTS_VBLANK, 0);
+            registers.pc = 0x0040;
+        }
+
+        // LCD STAT
+        else if (interruptsFired & 0x2) {
+            Interrupts_FlagSet(INTERRUPTS_LCDSTATUS, 0);
+            registers.pc = 0x0048;
+        }
+
+        // TIMER
+        else if (interruptsFired & 0x4) {
+            Interrupts_FlagSet(INTERRUPTS_TIMEROVERFLOW, 0);
+            registers.pc = 0x0050;
+        }
+
+        // SERIAL
+        else if (interruptsFired & 0x8) {
+            Interrupts_FlagSet(INTERRUPTS_SERIALLINK, 0);
+            registers.pc = 0x0058;
+        }
+
+        // JOYPAD
+        else if (interruptsFired & 0x10) {
+            Interrupts_FlagSet(INTERRUPTS_JOYPADPRESS, 0);
+            registers.pc = 0x0060;
+        }
     }
 }
 

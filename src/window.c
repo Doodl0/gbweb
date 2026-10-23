@@ -6,7 +6,7 @@
 #include <wchar.h>
 #include <window.h>
 
-#define STARTING_RESOLUTION_SCALE 4
+#define STARTING_RESOLUTION_SCALE 5
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -33,8 +33,17 @@ bool Window_Init() {
 }
 
 void Window_NoROM() {
-    char* messageLine1 = "No ROM loaded";
-    char* messageLine2 = "Press TAB to load a ROM";
+
+    char* message[] = {"No ROM loaded",
+        "Press TAB to load a ROM",
+        "",
+        "Controls:",
+        "WASD for D-Pad",
+        "A button = K key",
+        "B button = L Key",
+        "Select = Backspace",
+        "Start = Enter/Return"
+    };
 
     // Get text scale based on window size
     int window_x, window_y;
@@ -48,20 +57,23 @@ void Window_NoROM() {
 
     // Center the message and scale it up
     SDL_GetCurrentRenderOutputSize(renderer, &w, &h);
-    x = ((w / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE * SDL_strlen(messageLine1)) / 2;
-    y = ((h / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) / 2;
+
+    y = ((h / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) / 2 - 40;
 
     /* Draw the message */
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderDebugText(renderer, x, y - 10, messageLine1);
+    // Loop over lines and draw
+    for(int i = 0; i < 9; i++) {
+        // Centre x coordinate
+        x = ((w / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE * SDL_strlen(message[i])) / 2;
 
-    x = ((w / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE * SDL_strlen(messageLine2)) / 2;
-    y = ((h / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) / 2;
+        // Draw message line
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderDebugText(renderer, x, y + 10 * i, message[i]);
+    }
 
-    SDL_RenderDebugText(renderer, x, y + 10, messageLine2);
     SDL_RenderPresent(renderer);
 }
 
