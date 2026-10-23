@@ -1,9 +1,11 @@
+#include "SDL3/SDL_stdinc.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <SDL3/SDL_log.h>
 #include <memory.h>
 #include <ppu.h>
 #include <keypad.h>
+#include <cycles.h>
 
 memoryBus memory;
 Uint8 ime = 0;
@@ -68,6 +70,18 @@ Uint8 Registers_ReadR8(r8Enum r) {
     return 0;
 }
 
+void Memory_OAM_DMATransfer(Uint8 value) {
+    Uint16 sourceAddress = value << 8;
+
+    // Copy from 0xFE00 to 0xFE9F (OAM)
+    for(Uint16 i = 0; i <= 0x9F; i++) {
+        Memory_Write(0xFE00 + i, memory.memory[sourceAddress + i]);
+    }
+
+    // This takes 160 M cycles
+    Cycles_AddM(160);
+}
+
 void Memory_Write(Uint16 address, Uint8 value) {
     // Don't allow writing to cartridge
     if ((address >= 0x0) && (address <= 0x8000)) return;
@@ -77,8 +91,12 @@ void Memory_Write(Uint16 address, Uint8 value) {
         memory.VRAM[address& 0x1FFF] = value;
         if (address <= 0x97FF) PPU_UpdateTile(address);
     }
+
     // Keypad I/O register
     else if (address == 0xFF00) Keypad_Write(value);
+
+    // OAM DMA transfer
+    else if (address == 0xFF46) Memory_OAM_DMATransfer(value);
     else memory.memory[address] = value;
 }
 

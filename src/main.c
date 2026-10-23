@@ -17,7 +17,8 @@
 bool ROMLoaded = false;
 
 // Set a constant frametime for an FPS limit
-const Uint64 FPS = (1 / 59.7) * 1000000000;
+#define LIMIT_FPS 1
+const Uint64 FRAMETIME = (1 / 59.7) * 1000000000;
 Uint64 frameStart = 1000000;
 
 void Main_SetROMLoaded() {ROMLoaded = true;}
@@ -51,15 +52,14 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // This is a lot more efficient that using the CPU as many times per second and then rendering at 60FPS
     // because of SDL bottlenecks, meaning this function can't run that fast.
 
-    if ((SDL_GetTicksNS() - frameStart) > FPS)  {
+    if ((SDL_GetTicksNS() - frameStart) > FRAMETIME || !LIMIT_FPS)  {
+        frameStart = SDL_GetTicksNS();
         if (ROMLoaded) {
             Cycles_Step();
         }
         else {
             Window_NoROM();
         }
-
-        frameStart = SDL_GetTicksNS();
     }
     return SDL_APP_CONTINUE;
 }
