@@ -16,7 +16,23 @@
 
 #ifdef __EMSCRIPTEN__
 
-EMSCRIPTEN_KEEPALIVE int LoadFile(const Uint8 *buffer, size_t size) {
+// Javascript code to read file
+EM_JS(void, open_file, (int e), {
+          const file_reader = new FileReader();
+          file_reader.onload = (event) => {
+            const uint8Arr = new Uint8Array(event.target.result);
+            const num_bytes = uint8Arr.length * uint8Arr.BYTES_PER_ELEMENT;
+            const data_ptr = Module._malloc(num_bytes);
+            const data_on_heap = new Uint8Array(Module.HEAPU8.buffer, data_ptr, num_bytes);
+            data_on_heap.set(uint8Arr);
+            const res = Module.ccall('File_Load', 'number', ['number', 'number'], [data_on_heap.byteOffset, uint8Arr.length]);
+            Module._free(data_ptr);
+          };
+          file_reader.readAsArrayBuffer(e.target.files[0]);
+        };
+);
+
+EMSCRIPTEN_KEEPALIVE int File_Load(const Uint8 *buffer, size_t size) {
   /// Load a file - this function is called from javascript when the file upload is activated
   SDL_Log("ROM %.16s loaded, buffer %p size %zu", buffer + 0x134, &buffer, size);
 
@@ -32,7 +48,7 @@ EMSCRIPTEN_KEEPALIVE int LoadFile(const Uint8 *buffer, size_t size) {
 #else
 
 // TODO: Check file size
-void LoadFile(char* filename) {
+void File_Load(char* filename) {
     FILE* file = fopen(filename, "rb");
     Uint8 buffer[0x8000];
     Uint8 *ptr = buffer;
@@ -51,6 +67,7 @@ void LoadFile(char* filename) {
 
 void File_OpenDialog() {
     #ifdef __EMSCRIPTEN__
+
     EM_ASM(
       var file_selector = document.createElement('input');
       file_selector.setAttribute('type', 'file');
@@ -60,7 +77,7 @@ void File_OpenDialog() {
     );
     #else
 
-    LoadFile("rom.gb");
+    File_Load("rom.gb");
 
     #endif
 }
