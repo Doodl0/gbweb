@@ -19,6 +19,9 @@ typedef struct memoryBus {
         };
         Uint8 memory[0x10000];
     };
+
+    // ROM has a max of 256 banks, which is (256 * 16KiB) which is 4MiB
+    Uint8 ROM[0x400000];
 } memoryBus;
 
 extern memoryBus memory;

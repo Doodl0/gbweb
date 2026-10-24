@@ -25,6 +25,7 @@ set(SOURCE_FILES
   src/window.c
   src/keypad.c
   src/interrupts.c
+  src/timers.c
 )
 
 include_directories(include)

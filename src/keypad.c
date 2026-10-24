@@ -25,7 +25,7 @@ void Keypad_Write(Uint8 value) {
 }
 
 void Keypad_KeyDown(Keypad_Keys key) {
-    if (Interrupts_Enabled(INTERRUPTS_JOYPADPRESS)) Interrupts_FlagSet(INTERRUPTS_JOYPADPRESS, 1);
+    Interrupts_FlagSet(INTERRUPTS_JOYPADPRESS, 1);
     switch(key) {
         case KEY_UP: rows[1] &= 0xB; break;
         case KEY_DOWN: rows[1] &= 0x7; break;

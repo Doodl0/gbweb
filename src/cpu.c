@@ -5,6 +5,7 @@
 #include <memory.h>
 #include <cycles.h>
 #include <interrupts.h>
+#include <timers.h>
 
 bool halted = false;
 bool stopped = false;
@@ -1212,6 +1213,7 @@ void CPU_HandleInterrupt() {
     Uint8 interruptsFired = interruptFlags & interruptEnable;
 
     if (interruptsFired) {
+        // Basically RST
         ime = 0;
         registers.sp -= 2;
         Memory_Write(registers.sp + 1, (Uint8)((registers.pc & 0xFF00) >> 8));
@@ -1233,6 +1235,7 @@ void CPU_HandleInterrupt() {
 
         // TIMER
         else if (interruptsFired & 0x4) {
+            SDL_Log("TIMER");
             Interrupts_FlagSet(INTERRUPTS_TIMEROVERFLOW, 0);
             registers.pc = 0x0050;
         }
@@ -1258,9 +1261,16 @@ void CPU_Step() {
 
     registers.pc = CPU_ExecuteInstruction(registers.pc);
 
+    // Update timer with current cycles
+    Uint8 cycles = Cycles_Get();
+    Timers_Step(cycles);
+
     if (ime) {
         CPU_HandleInterrupt();
     }
+
+    // Update timer again in case an RST occured
+    Timers_Step(cycles - Cycles_Get());
 }
 
 void CPU_Init() {

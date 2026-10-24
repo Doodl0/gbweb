@@ -319,7 +319,7 @@ void PPU_Step() {
                     Window_Blit();
 
                     // Send VBLANK interrupt
-                    if (Interrupts_Enabled(INTERRUPTS_VBLANK)) Interrupts_FlagSet(INTERRUPTS_VBLANK, 1);
+                    Interrupts_FlagSet(INTERRUPTS_VBLANK, 1);
                 }
                 else mode = OAM;
                 line++;
