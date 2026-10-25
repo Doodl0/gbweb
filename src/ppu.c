@@ -70,6 +70,20 @@ static Uint8 PPU_Register_STAT() {
     return Memory_Read(0xFF41);
 }
 
+void PPU_Register_STAT_SetMode() {
+    Uint8 value = (PPU_Register_STAT() & 0xFC) + mode;
+    Memory_Write(0xFF41, value);
+}
+
+void PPU_Register_STAT_SetLYCLY() {
+    Uint8 value = (PPU_Register_STAT() & 0xFB) + STAT_LYCLY;
+    Memory_Write(0xFF41, value);
+}
+
+void PPU_Register_STAT_ResetLYCLY() {
+    Memory_Write(0xFF41, (PPU_Register_STAT() & 0xFB));
+}
+
 // Take values from
 void PPU_UpdateTile(Uint16 address) {
     // Get base address for tile
@@ -281,6 +295,17 @@ void PPU_Step() {
     // Reference : https://imrannazar.com/series/gameboy-emulation-in-javascript/gpu-timing
     dots += Cycles_Get();
 
+    if (PPU_Register_LYCompare() == line) {
+        PPU_Register_STAT_SetLYCLY();
+        // If enabled, send STAT interrupt
+        if (PPU_Register_STAT() & STAT_LYCINT) {
+            Interrupts_FlagSet(INTERRUPTS_LCDSTATUS, 1);
+        }
+    }
+    else {
+        PPU_Register_STAT_ResetLYCLY();
+    }
+
     switch(mode) {
         // OAM read mode, scanline active
         case OAM:
@@ -288,9 +313,6 @@ void PPU_Step() {
                 // Enter VRAM read / draw mode (mode 3)
                 dots -= 80;
                 mode = DRAW;
-
-            // STAT interrupt
-
             }
             break;
 
@@ -301,6 +323,12 @@ void PPU_Step() {
                 // Enter HBLANK
                 dots -= 172;
                 mode = HBLANK;
+
+                // If enabled, send STAT interrupt
+                if (PPU_Register_STAT() & STAT_MODE0) {
+                    Interrupts_FlagSet(INTERRUPTS_LCDSTATUS, 1);
+                    PPU_Register_STAT_SetMode();
+                };
 
                 // Write a scanline to the framebuffer
                 PPU_DrawLine();
@@ -320,8 +348,23 @@ void PPU_Step() {
 
                     // Send VBLANK interrupt
                     Interrupts_FlagSet(INTERRUPTS_VBLANK, 1);
+
+                    // If enabled, send STAT interrupt
+                    if (PPU_Register_STAT() & STAT_MODE1) {
+                        Interrupts_FlagSet(INTERRUPTS_LCDSTATUS, 1);
+                        PPU_Register_STAT_SetMode();
+                    }
+
                 }
-                else mode = OAM;
+                else {
+                    mode = OAM;
+
+                    // If enabled, send STAT interrupt
+                    if (PPU_Register_STAT() & STAT_MODE2) {
+                        Interrupts_FlagSet(INTERRUPTS_LCDSTATUS, 1);
+                        PPU_Register_STAT_SetMode();
+                    }
+                }
                 line++;
                 dots -= 204;
             }
@@ -335,6 +378,12 @@ void PPU_Step() {
                     // Restart scanning modes
                     mode = OAM;
                     line = 0;
+
+                    // If enabled, send STAT interrupt
+                    if (PPU_Register_STAT() & STAT_MODE2) {
+                        Interrupts_FlagSet(INTERRUPTS_LCDSTATUS, 1);
+                        PPU_Register_STAT_SetMode();
+                    }
                 }
 
                 dots -= 456;

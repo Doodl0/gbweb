@@ -77,7 +77,7 @@ void File_OpenDialog() {
     );
     #else
 
-    File_Load("rom.gb");
+    File_Load("romacid.gb");
 
     #endif
 }

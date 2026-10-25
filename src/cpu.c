@@ -322,7 +322,7 @@ static void EI() {
 }
 
 static void HALT() {
-    if (ime) {
+    if (!ime) {
          halted = true;
     }
     else {
@@ -1213,6 +1213,8 @@ void CPU_HandleInterrupt() {
     Uint8 interruptsFired = interruptFlags & interruptEnable;
 
     if (interruptsFired) {
+        halted = false;
+
         // Basically RST
         ime = 0;
         registers.sp -= 2;
@@ -1235,7 +1237,6 @@ void CPU_HandleInterrupt() {
 
         // TIMER
         else if (interruptsFired & 0x4) {
-            SDL_Log("TIMER");
             Interrupts_FlagSet(INTERRUPTS_TIMEROVERFLOW, 0);
             registers.pc = 0x0050;
         }
@@ -1259,7 +1260,7 @@ void CPU_Step() {
     //Memory_Log(memory, registers);
     #endif
 
-    registers.pc = CPU_ExecuteInstruction(registers.pc);
+    if (!halted) registers.pc = CPU_ExecuteInstruction(registers.pc);
 
     // Update timer with current cycles
     Uint8 cycles = Cycles_Get();
