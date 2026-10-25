@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <SDL3/SDL.h>
+#include <math.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -47,16 +48,16 @@ EMSCRIPTEN_KEEPALIVE int File_Load(const Uint8 *buffer, size_t size) {
 
 #else
 
-// TODO: Check file size
 void File_Load(char* filename) {
     FILE* file = fopen(filename, "rb");
-    Uint8 buffer[0x8000];
+    // ROM has a max of 256 banks, which is (256 * 16KiB) which is 4MiB
+    Uint8 buffer[0x400000];
     Uint8 *ptr = buffer;
-    fread(ptr, sizeof(Uint8), 0x8000, file);
+    fread(ptr, sizeof(Uint8), 0x400000, file);
 
-    SDL_Log("ROM %.16s loaded from file, buffer %p size %u" , ptr + 0x134, &ptr, 0x8000);
+    SDL_Log("ROM %.16s loaded from file, buffer %p" , ptr + 0x134, &ptr);
 
-    Memory_Set(ptr,0x8000);
+    Memory_Set(ptr, 0x400000);
     fclose(file);
 
     CPU_Init();

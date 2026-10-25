@@ -37,6 +37,8 @@ Uint8 Memory_Read(Uint16 address);
 
 Uint8 Memory_ReadVRAM(Uint16 address);
 
+Uint8 Memory_ReadROM(Uint16 address);
+
 void Memory_Set(Uint8* buffer, Uint32 size);
 
 void Memory_LogInit();

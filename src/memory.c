@@ -112,9 +112,16 @@ Uint8 Memory_ReadVRAM(Uint16 address) {
     return memory.VRAM[address];
 }
 
+Uint8 Memory_ReadROM(Uint16 address) {
+    return memory.ROM[address];
+}
+
 void Memory_Set(Uint8* buffer, Uint32 size) {
-    memcpy(&memory, buffer, 0x8000);
-    SDL_Log("ROM %.16s loaded into GB memory, buffer %p size %u", (&memory.memory[0]) + 0x134, &memory.memory, size);
+    // Copy ROM
+    memcpy(&memory.ROM, buffer, size);
+    // Copy first 2 ROM banks into memory
+    memcpy(&memory.memory, &memory.ROM, 0x8000);
+    SDL_Log("ROM %.16s loaded into GB memory, buffer %p size", (&memory.memory[0]) + 0x134, &memory.memory);
 }
 
 void Memory_LogInit() {

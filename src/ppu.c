@@ -165,10 +165,9 @@ pixelColour PPU_ColourPixel(Uint8 pixel) {
     }
 }
 
-void PPU_DrawLine() {
-    Uint8 scanlineRow[160] = {};
+Uint8 scanlineRow[160] = {};
 
-    // Render background
+void PPU_DrawBackgroundScanline() {
     if (PPU_Register_LCD_Control(LCD_CONTROL_BACKGROUND)) {
         // Get scrollY register from memory
         Uint8 scy = PPU_Register_ScrollY();
@@ -241,8 +240,9 @@ void PPU_DrawLine() {
             canvasOffset += 1;
         }
     }
+}
 
-    // Render sprites
+void PPU_DrawSpriteScanline() {
     if (PPU_Register_LCD_Control(LCD_CONTROL_SPRITES)) {
         // Reference: https://imrannazar.com/series/gameboy-emulation-in-javascript/sprites
 
@@ -289,6 +289,13 @@ void PPU_DrawLine() {
             }
         }
     }
+}
+
+void PPU_DrawLine() {
+    // Render background
+    PPU_DrawBackgroundScanline();
+    // Render sprites
+    PPU_DrawSpriteScanline();
 }
 
 void PPU_Step() {
