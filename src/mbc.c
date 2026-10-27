@@ -73,6 +73,7 @@ void MBC_WriteMBC1(Uint16 address, Uint8 value) {
 
 void MBC_Write(Uint16 address, Uint8 value) {
     switch (currentMBC) {
+        case MBC_NONE: romBank = 1; break;
         case MBC1: MBC_WriteMBC1(address, value); break;
         case MBC1RAM: MBC_WriteMBC1(address, value); break;
         case MBC1RAMBATTERY: MBC_WriteMBC1(address, value); break;

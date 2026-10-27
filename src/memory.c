@@ -95,7 +95,7 @@ void Memory_Write(Uint16 address, Uint8 value) {
     }
 
     // If in VRAM, set and also update tileset
-    if ((address >= 0x8000) && (address <= 0x9FFF)) {
+    else if ((address >= 0x8000) && (address <= 0x9FFF)) {
         memory.VRAM[address& 0x1FFF] = value;
         if (address <= 0x97FF) PPU_UpdateTile(address);
     }
