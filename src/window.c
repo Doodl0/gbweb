@@ -39,8 +39,8 @@ void Window_NoROM() {
         "",
         "Controls:",
         "WASD for D-Pad",
-        "A button = K key",
-        "B button = L Key",
+        "A button = L key",
+        "B button = K Key",
         "Select = Backspace",
         "Start = Enter/Return"
     };

@@ -1,3 +1,4 @@
+#include "SDL3/SDL_log.h"
 #include <SDL3/SDL_stdinc.h>
 #include <memory.h>
 
@@ -73,12 +74,15 @@ void MBC_WriteMBC1(Uint16 address, Uint8 value) {
 void MBC_Write(Uint16 address, Uint8 value) {
     switch (currentMBC) {
         case MBC1: MBC_WriteMBC1(address, value); break;
+        case MBC1RAM: MBC_WriteMBC1(address, value); break;
+        case MBC1RAMBATTERY: MBC_WriteMBC1(address, value); break;
         default: return; break;
     }
 }
 
 void MBC_SetMBC() {
     currentMBC = MBC_GetMBC();
+    SDL_Log("MBC 0x%02X", currentMBC);
 }
 
 Uint16 MBC_GetROMOffset() {
