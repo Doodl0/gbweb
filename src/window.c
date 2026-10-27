@@ -6,7 +6,7 @@
 #include <wchar.h>
 #include <window.h>
 
-#define STARTING_RESOLUTION_SCALE 5
+#define STARTING_RESOLUTION_SCALE 3
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
