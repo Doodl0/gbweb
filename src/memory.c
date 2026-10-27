@@ -6,6 +6,7 @@
 #include <ppu.h>
 #include <keypad.h>
 #include <cycles.h>
+#include <mbc.h>
 
 memoryBus memory;
 Uint8 ime = 0;
@@ -83,8 +84,15 @@ void Memory_OAM_DMATransfer(Uint8 value) {
 }
 
 void Memory_Write(Uint16 address, Uint8 value) {
-    // Don't allow writing to cartridge
-    if ((address >= 0x0) && (address <= 0x8000)) return;
+    // Don't allow writing to cartridge, instead set MBC things
+    if ((address >= 0x0) && (address <= 0x8000)) {
+        MBC_Write(address, value);
+    }
+
+    // External RAM
+    else if ((address >= 0xA000) && (address <= 0xBFFF)) {
+        memory.cartridgeRAM[MBC_GetRAMOffset() + (address & 0x1FFF)] = value;
+    }
 
     // If in VRAM, set and also update tileset
     if ((address >= 0x8000) && (address <= 0x9FFF)) {
@@ -101,10 +109,27 @@ void Memory_Write(Uint16 address, Uint8 value) {
 }
 
 Uint8 Memory_Read(Uint16 address) {
+    // Switchable bank memory
+    if ((address >= 0x4000) && (address < 0x8000)) {
+        return memory.ROM[MBC_GetROMOffset() + (address & 0x3FFF)];
+    }
+
+    // External RAM
+    else if ((address >= 0xA000) && (address <= 0xBFFF)) {
+        return memory.cartridgeRAM[MBC_GetRAMOffset() + (address & 0x1FFF)];
+    }
+
     // Read only PPU current scanline register
-    if (address == 0xFF44) return PPU_Line();
+    else if (address == 0xFF44) return PPU_Line();
     // Keypad I/O register
     else if (address == 0xFF00) return Keypad_Read();
+
+    // Serial control register
+    else if (address == 0xFF01) return 0xFF;
+
+    // Serial control register
+    else if (address == 0xFF02) return 0xFF;
+
     else return memory.memory[address];
 }
 
@@ -116,13 +141,29 @@ Uint8 Memory_ReadROM(Uint16 address) {
     return memory.ROM[address];
 }
 
+void Memory_SetROMBank(Uint8 sourceBank, Uint8 destinationBank) {
+    // Copy ROM bank to bank in memory
+    memcpy(&memory.memory[0x4000 * destinationBank], &memory.ROM[0x4000 * sourceBank], 0x8000);
+}
+
+void Memory_SetRAMBank(Uint8 sourceBank) {
+    // Copy RAM bank to bank in memory
+    memcpy(&memory.externalRAM, &memory.cartridgeRAM[0x2000 * sourceBank], 0x2000);
+}
+
 void Memory_Set(Uint8* buffer, Uint32 size) {
     // Copy ROM
-    memcpy(&memory.ROM, buffer, size);
+    memcpy(&memory.ROM, buffer, 0x400000);
     // Copy first 2 ROM banks into memory
-    memcpy(&memory.memory, &memory.ROM, 0x8000);
+    Memory_SetROMBank(0, 0);
+    Memory_SetROMBank(1, 1);
+
+    MBC_SetMBC();
+
     SDL_Log("ROM %.16s loaded into GB memory, buffer %p size", (&memory.memory[0]) + 0x134, &memory.memory);
 }
+
+
 
 void Memory_LogInit() {
     log = fopen("log.txt", "w");

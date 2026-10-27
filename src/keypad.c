@@ -16,7 +16,7 @@ Uint8 Keypad_Read() {
         case 0x10: return rows[0];
         case 0x20: return rows[1];
         case 0x30: return 0x0F;
-        default: return 0;
+        default: return 0x0F;
     }
 }
 
