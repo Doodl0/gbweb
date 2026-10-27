@@ -913,7 +913,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                     // 8-bit INC
                     case 4:
                         INC_r8(Table_r(y));
-                        if (Table_r(y) == HL8) Cycles_AddM(2);
+                        if (Table_r(y) == HL8) Cycles_AddM(3);
                         else Cycles_AddM(1);
                         return (address + 1);
                     break;
@@ -921,7 +921,7 @@ Uint16 CPU_ExecuteInstruction(Uint16 address) {
                     // 8-bit DEC
                     case 5:
                         DEC_r8(Table_r(y));
-                        if (Table_r(y) == HL8) Cycles_AddM(2);
+                        if (Table_r(y) == HL8) Cycles_AddM(3);
                         else Cycles_AddM(1);
                         return (address + 1);
                     break;

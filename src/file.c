@@ -77,7 +77,7 @@ void File_OpenDialog() {
     );
     #else
 
-    File_Load("smb.gb");
+    File_Load("instr_timing.gb");
 
     #endif
 }
