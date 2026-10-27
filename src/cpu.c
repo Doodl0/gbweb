@@ -1,6 +1,7 @@
 #include "SDL3/SDL_stdinc.h"
 #include <SDL3/SDL_log.h>
 #include <SDL3/SDL.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <memory.h>
 #include <cycles.h>
@@ -318,16 +319,12 @@ static void DI() {
 }
 
 static void EI() {
-    ime = 1;
+    ime_next = 1;
+    //ime = 1;
 }
 
 static void HALT() {
-    if (!ime) {
-         halted = true;
-    }
-    else {
-        return;
-    }
+     halted = true;
 }
 
 static void INC_r8(r8Enum target) {
@@ -1213,8 +1210,6 @@ void CPU_HandleInterrupt() {
     Uint8 interruptsFired = interruptFlags & interruptEnable;
 
     if (interruptsFired) {
-        halted = false;
-
         // Basically RST
         ime = 0;
         registers.sp -= 2;
@@ -1261,13 +1256,27 @@ void CPU_Step() {
     #endif
 
     if (!halted) registers.pc = CPU_ExecuteInstruction(registers.pc);
+    else {
+        // Keep clock going to prevent freezing and keep timer going
+        Cycles_AddM(1);
+    }
 
     // Update timer with current cycles
     Uint8 cycles = Cycles_Get();
     Timers_Step(cycles);
 
+    // Exit halt if interrupt
+    if ((Memory_Read(0xFF0F) & Memory_Read(0xFFFF)) && (halted == true)) {
+        halted = false;
+    }
+
     if (ime) {
         CPU_HandleInterrupt();
+    }
+
+    if (ime_next) {
+        ime = 1;
+        ime_next = 0;
     }
 
     // Update timer again in case an RST occured

@@ -64,10 +64,10 @@ void Timers_Step(Uint8 cycles) {
     if (Timers_Register_TAC() & 4) {
         // Check and set speed
         switch (Timers_Register_TAC() & 3) {
-            case 0: tacThreshold = 64; break; // 4K
-            case 1: tacThreshold =  1; break; // 256K
-            case 2: tacThreshold =  4; break; // 64K
-            case 3: tacThreshold = 16; break; // 16K
+            case 0: tacThreshold = 64; break; // 256K
+            case 1: tacThreshold =  1; break; // 4K
+            case 2: tacThreshold =  4; break; // 16K
+            case 3: tacThreshold = 16; break; // 64K
         }
 
         if (clockMain >= tacThreshold) {

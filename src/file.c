@@ -2,7 +2,6 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <SDL3/SDL.h>
-#include <math.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -78,7 +77,7 @@ void File_OpenDialog() {
     );
     #else
 
-    File_Load("romacid.gb");
+    File_Load("rom.gb");
 
     #endif
 }
