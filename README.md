@@ -15,7 +15,8 @@
 - B button -> K key
 - Select button -> Backspace key
 - Start button -> Enter key
-These are also shown before loading a ROM
+- Load a ROM from a file - press the Tab key on the game window
+- These controls are also shown before loading a ROM
 
 ## Running / Building
 - You can try it right now at [doodl0.github.io/gbweb/](https://doodl0.github.io/gbweb/)!
