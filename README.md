@@ -19,6 +19,7 @@ These are also shown before loading a ROM
 
 ## Running / Building
 - You can try it right now at [doodl0.github.io/gbweb/](https://doodl0.github.io/gbweb/)!
+- **If you don't have any ROMs to test, you can watch the demo video on the page or you can try the provided tic-tac-toe homebrew ROM, which can be downloaded [here](https://doodl0.github.io/gbweb/assets/GB-TicTacToe.gb) or on the webpage as a hyperlink.**
 - Alternatively, you can build a desktop version using CMake. There are provided build scripts in the repo, although these are rather basic and will only work on Linux. If you want to run it on desktop, you must rename your ROM file to `rom.gb` and place it in the same directory as the executable. (Sorry about this, I made this with a web-first design plan and didn't have time to add a local file dialog library)
 - If you want to compile it yourself, make sure to git clone with `--recurse-submodules`, so that SDL3 is also downloaded.
 - Additionally, if you want to build a web version yourself, you need to install the Emscripten SDK. You can read the instructions for that [here](https://emscripten.org/docs/getting_started/downloads.html).
